@@ -19,8 +19,6 @@ iyuv = True
 mp4v = True  # MPEG-4 Video
 b48r = True  # Uncompressed 48-bit RGB
 
-
-
 # Setting the parameters of the stream
 h = 480  # 720
 w = 640  # 1280
