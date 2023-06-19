@@ -125,9 +125,3 @@ for i in cpth:
 
 cv2.destroyAllWindows()
 
-
-#adding something here
-
-#atonve
-
-#twice
