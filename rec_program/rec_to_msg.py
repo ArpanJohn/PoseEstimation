@@ -12,26 +12,33 @@ import pickle
 from numpy import random
 import sys
 
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
-from PyQt5.QtWidgets import *
-
 now = datetime.now()
 today = date.today()
 dtime=[]
 ctime=[]
+# Setting the parameters of the stream
+h=480
+w=640
+fps=30
+windowscale=1
+
+# choose video codec
+xvid=True # compressed
+rgba=True # Uncompressed 32-bit RGBA
+mjpg=True # Motion JPEG
+iyuv=True # 
+mp4v=True # MPEG-4 Video
+b48r=True # Uncompressed 48-bit RGB
+
 class rec:
     def __init__(self, *args, **kwargs):
         self.f=0
         # super(rec, self).__init__(*args, **kwargs)
-        print('hi')
         worker = self.readframe()
-        print('hello')
 
 
     def createFile(self, fileCounter):
+        global fps,w,h
         self.pFileName = 'test'
         self.tm1 = today.strftime("%d-%m-%y")
         self.tm2 = now.strftime("%H-%M-%S")
@@ -51,6 +58,31 @@ class rec:
                 self.rnd) + ".msgpack"
 
             self.paramFile = open(self.parmsFileName, 'wb')
+            # Define writer with defined parameters and suitable output filename for e.g. `Output.mp4`
+            if xvid:
+                self.vid_filename = self.sessionDir + "/" + "Videoxvid.avi"    
+                fourcc = cv2.VideoWriter_fourcc(*'XVID')
+                self.cv_writer_xvid = cv2.VideoWriter(self.vid_filename, fourcc, fps,(w,h))
+            if rgba:
+                self.vid_filename = self.sessionDir + "/" + "Videorgba.avi"    
+                fourcc = cv2.VideoWriter_fourcc(*'RGBA')
+                self.cv_writer_rgba = cv2.VideoWriter(self.vid_filename, fourcc, fps,(w,h))
+            if mjpg:
+                self.vid_filename = self.sessionDir + "/" + "Videomjpg.avi"    
+                fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+                self.cv_writer_mjpg = cv2.VideoWriter(self.vid_filename, fourcc, fps,(w,h))
+            if iyuv:
+                self.vid_filename = self.sessionDir + "/" + "Videoiyuv.avi"    
+                fourcc = cv2.VideoWriter_fourcc(*'IYUV')
+                self.cv_writer_iyuv = cv2.VideoWriter(self.vid_filename, fourcc, fps,(w,h))
+            if mp4v:
+                self.vid_filename = self.sessionDir + "/" + "Videomp4v.mp4"    
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                self.cv_writer_mp4v = cv2.VideoWriter(self.vid_filename, fourcc, fps,(w,h))
+            if b48r:
+                self.vid_filename = self.sessionDir + "/" + "Videob48r.mp4"    
+                fourcc = cv2.VideoWriter_fourcc(*'b48r')
+                self.cv_writer_b48r = cv2.VideoWriter(self.vid_filename, fourcc, fps,(w,h))
 
         self.commonName = self.pFileName + " " + self.tM + " " + str(self.rnd)
         self.depthfilename = self.sessionDir + "/" + "DEPTH" + "_" + self.tm + "_" + str(
@@ -75,11 +107,7 @@ class rec:
         paramsfile.write(p_packed)
 
     def readframe(self):
-        # Setting the parameters of the stream
-        h=480
-        w=640
-        fps=15
-        windowscale=1
+        global fps
 
         self.xy = [w,h]
 
@@ -105,7 +133,7 @@ class rec:
         pipeline_wrapper = rs.pipeline_wrapper(pipeline)
         pipeline_profile = config.resolve(pipeline_wrapper)
         device = pipeline_profile.get_device()
-        device_product_line = str(device.get_info(rs.camera_info.product_line))
+        # device_product_line = str(device.get_info(rs.camera_info.product_line))
 
         found_rgb = False
         for s in device.sensors:
@@ -202,6 +230,20 @@ class rec:
                     print(type(v))
 
                 rec.save_frames(color_image, xyzpos, (rs.frame.get_frame_metadata(depth_frame,rs.frame_metadata_value.time_of_arrival)), self.colourfile, self.depthfile, self.paramFile)
+                
+                if xvid:
+                    self.cv_writer_xvid.write(color_image)
+                if rgba:
+                    self.cv_writer_rgba.write(color_image)
+                if mjpg:
+                    self.cv_writer_mjpg.write(color_image)
+                if iyuv:
+                    self.cv_writer_iyuv.write(color_image)
+                if mp4v:
+                    self.cv_writer_mp4v.write(color_image)
+                if b48r:
+                    self.cv_writer_b48r.write(color_image)
+
                 self.counter = self.counter + 1
                 fps = 1 / (new_frame_time - prev_frame_time)
                 prev_frame_time = new_frame_time
@@ -213,7 +255,7 @@ class rec:
                 c+=1
                 dtime.append(rs.frame.get_frame_metadata(depth_frame,rs.frame_metadata_value.time_of_arrival))
                 ctime.append(rs.frame.get_frame_metadata(color_frame,rs.frame_metadata_value.time_of_arrival))
-
+                
         finally:
 
             # Stop streaming
