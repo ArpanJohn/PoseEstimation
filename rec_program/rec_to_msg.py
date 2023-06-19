@@ -1,3 +1,4 @@
+# Importing necessary libraries
 import pyrealsense2 as rs
 import numpy as np
 import cv2
@@ -8,14 +9,13 @@ import os.path
 import time
 from support.funcs import *
 from datetime import date, datetime
-import pickle
 from numpy import random
-import sys
 
 now = datetime.now()
 today = date.today()
 dtime=[]
 ctime=[]
+
 # Setting the parameters of the stream
 h=480
 w=640
@@ -25,7 +25,6 @@ windowscale=1
 class rec:
     def __init__(self, *args, **kwargs):
         self.f=0
-        # super(rec, self).__init__(*args, **kwargs)
         worker = self.readframe()
 
 
@@ -145,7 +144,7 @@ class rec:
                 color_frame = frames.get_color_frame()
                 if not depth_frame or not color_frame:
                     continue                                
-                
+
                 # get timestamp of frame
                 timestamps.append((rs.frame.get_frame_metadata(depth_frame,rs.frame_metadata_value.time_of_arrival)))
 
