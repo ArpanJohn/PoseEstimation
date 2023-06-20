@@ -2,7 +2,24 @@ import math
 import numpy as np
 from math import sqrt
 import pandas as pd
+from scipy.signal import savgol_filter
+import matplotlib.pyplot as plt
 
+def pvt(x,t,ylabel='Angle (degrees)'):
+    y=[]
+    for i in x:
+        y.append(i)
+    w = savgol_filter(y,  int(len(y)/20),3)
+    plt.plot(t,w)
+    plt.ylabel(ylabel)
+    plt.xlabel('time(s)')    
+
+def frame_con(point,rotmat,org):
+    point=np.array(point)
+    point=point.reshape(3,1)
+    point=point-org 
+    point=np.matmul(rotmat.T,point)
+    return point
 
 def RMSE(y_true, y_pred,time_true,time_pred):
     from scipy.signal import savgol_filter

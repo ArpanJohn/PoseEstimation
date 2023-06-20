@@ -16,13 +16,6 @@ w=640 #1280
 fps=30
 windowscale=0.6
 
-def find_midpoint(point1, point2):
-    midpoint = []
-    for i in range(len(point1)):
-        coord_avg = (point1[i] + point2[i]) / 2.0
-        midpoint.append(coord_avg)
-    return midpoint
-
 # Initializing the model to locate the landmarks
 mp_holistic = mp.solutions.holistic
 holistic_model = mp_holistic.Holistic(
@@ -256,7 +249,47 @@ for k,j in land_marks.items():
         if do:
             startflag=0
 
-# Filtering for limb length occlusion
+
+# converting mpipe to mocap frame
+rotmat=[]
+org=[]
+with open('D435_rotmat.txt', 'r') as fp:
+    for line in fp:
+        x = line[:-1]
+        x=x.replace(']','')
+        x=x.replace('[','')
+        line=x.split(' ')
+        while ' ' in line:
+            line=line.remove(' ')
+        while '' in line:
+            ind=line.index('')
+            line.pop(ind)
+        x=[]
+        for i in line:
+            x.append(float(i))
+        rotmat.append(x)
+    rotmat=np.array(rotmat)
+
+with open('D435_org.txt', 'r') as fp:
+    for line in fp:
+        x = line[:-1]
+        x=x.replace(']','')
+        x=x.replace('[','')
+        org.append([float(x)])
+    k_org=np.array(org)
+
+for index,j in df.iterrows():
+    for k in range(1,1+7*3,3):
+        point=[]
+        for p in range(k,k+3):
+            point.append(j[p])
+        converted_point=frame_con(point,rotmat,org)
+        # print(converted_point)
+        for o in range(3):
+            df.iloc[index,k+o]=converted_point[o]
+
+
+# Filtering based on limb length occlusion
 LH, LK, LA, LT, RH, RK, RA, RT = [],[],[],[],[],[],[],[]
 
 c=1
