@@ -57,9 +57,6 @@ ppth = glob.glob(targetPattern_param)
 targetPattern_colour = f"{pth}\\COLOUR*"
 cpth = glob.glob(targetPattern_colour)
 
-# campth.pop(0)
-# cpth.pop(0)
-
 print(campth)
 print(cpth)
 print(ppth)
@@ -228,4 +225,249 @@ for key,value in land_marks.items():
                 continue
         df[key+xyz[j]]=pd.Series(data)
 
-df.to_csv('mpipe.csv', index=False)
+# Filtering for box based occlusion
+startflag=0
+before_occ=0
+do=False
+box_dic={'lul': [LH,LK,['LH','LK']],'rul': [RH,RK,['RH','RK']],
+         'lll': [LK,LA,['LK','LA']],'rll': [RK,RA,['RK','RA']],
+         'lfb': [LA,LT,['LA','LT']],'rfb': [RA,RT,['RA','RT']]}
+
+for k,j in land_marks.items():
+    for key,values in box_dic.items():
+        for i in range(c):
+            r= 40 if key == 'lhb' or key == 'rhb' else 30
+            try:
+                if point_in_quad(j[i],draw_box(color_image,values[0][i],values[1][i],(0,0,1),r)) and k not in values[2]:
+                    if startflag == 0:
+                        startflag = i
+                        before_occ=startflag-1 # before occlusion
+                    for p in values[2]:
+                        if df[k+'_z'].tolist()[before_occ]>df[p+'_z'].tolist()[before_occ]:
+                            print(k,'is occluded by', key, p , 'at frame', i) 
+                            # df.loc[i,k+'_x']=df.loc[before_occ,k+'_y']
+                            # df.loc[i,k+'_y']=df.loc[before_occ,k+'_x']
+                            df.loc[i,k+'_z']=df.loc[before_occ,k+'_z']
+                    do=True
+            except:
+                pass
+            else:
+                do=False
+        if do:
+            startflag=0
+
+# Filtering for limb length occlusion
+LH, LK, LA, LT, RH, RK, RA, RT = [],[],[],[],[],[],[],[]
+
+c=1
+for i,j in df.iterrows():
+    for k in range(c,c+3,3):
+        point=[]
+        for p in range(k,k+3):
+            point.append(j[p])   
+        point=np.array(point)      
+        LH.append(point)
+c+=3
+for i,j in df.iterrows():
+    for k in range(c,c+3,3):
+        point=[]
+        for p in range(k,k+3):
+            point.append(j[p])
+        point=np.array(point)        
+        LK.append(point)
+c+=3
+for i,j in df.iterrows():
+    for k in range(c,c+3,3):
+        point=[]
+        for p in range(k,k+3):
+            point.append(j[p])
+        point=np.array(point)        
+        LA.append(point)
+c+=3
+for i,j in df.iterrows():
+    for k in range(c,c+3,3):
+        point=[]
+        for p in range(k,k+3):
+            point.append(j[p])
+        point=np.array(point)        
+        LT.append(point)
+c+=3
+for i,j in df.iterrows():
+    for k in range(c,c+3,3):
+        point=[]
+        for p in range(k,k+3):
+            point.append(j[p])  
+        point=np.array(point)      
+        RH.append(point)
+c+=3
+for i,j in df.iterrows():
+    for k in range(c,c+3,3):
+        point=[]
+        for p in range(k,k+3):
+            point.append(j[p])
+        point=np.array(point)        
+        RK.append(point)
+c+=3
+for i,j in df.iterrows():
+    for k in range(c,c+3,3):
+        point=[]
+        for p in range(k,k+3):
+            point.append(j[p])
+        point=np.array(point)        
+        RA.append(point)
+c+=3
+for i,j in df.iterrows():
+    for k in range(c,c+3,3):
+        point=[]
+        for p in range(k,k+3):
+            point.append(j[p])
+        point=np.array(point)        
+        RT.append(point)
+
+LH=np.array(LH)
+LK=np.array(LK)
+LA=np.array(LA)
+LT=np.array(LT)
+
+RH=np.array(RH)
+RK=np.array(RK)
+RA=np.array(RA)
+RT=np.array(RT)
+
+Lul=list(LH-LK)
+Lll=list(LK-LA)
+Lf=list(LA-LT)
+Rul=list(RH-RK)
+Rll=list(RK-RA)
+Rf=list(RA-RT)
+H=list(RH-LH)
+
+for i in range(len(Lul)):
+    Lul[i]=np.linalg.norm(Lul[i])
+    Lll[i]=np.linalg.norm(Lll[i])
+    Lf[i]=np.linalg.norm(Lf[i])
+    Rul[i]=np.linalg.norm(Rul[i])
+    Rll[i]=np.linalg.norm(Rll[i])
+    Rf[i]=np.linalg.norm(Rf[i])
+    H[i]=np.linalg.norm(H[i])
+
+df_limb=pd.DataFrame(columns=['Lul','Lll','Lf','Rul','Rll','Rf','H'])
+
+df_limb['Lul']=pd.Series(Lul)
+df_limb['Lll']=pd.Series(Lll)
+df_limb['Lf']=pd.Series(Lf)
+df_limb['Rul']=pd.Series(Rul)
+df_limb['Rll']=pd.Series(Rll)
+df_limb['Rf']=pd.Series(Rf)
+df_limb['H']=pd.Series(H)
+
+oLul,oLll,oLf,oRul,oRll,oRf,oH=[0],[0],[0],[0],[0],[0],[0]
+th=0.10 # 10cm
+for i in range(1,len(df_limb)):
+    if abs(df_limb['Lul'][i]-df_limb['Lul'].mean())>th:
+        oLul.append(1)
+    else:
+        oLul.append(0)
+    if abs(df_limb['Lll'][i]-df_limb['Lll'].mean())>th:
+        oLll.append(1)
+    else:
+        oLll.append(0)
+    if abs(df_limb['Lf'][i]-df_limb['Lf'].mean())>th:
+        oLf.append(1)
+    else:
+        oLf.append(0)
+    if abs(df_limb['Rul'][i]-df_limb['Rul'].mean())>th:
+        oRul.append(1)
+    else:
+        oRul.append(0)
+    if abs(df_limb['Rll'][i]-df_limb['Rll'].mean())>th:
+        oRll.append(1)
+    else:
+        oRll.append(0)
+    if abs(df_limb['Rf'][i]-df_limb['Rf'].mean())>th:
+        oRf.append(1)
+    else:
+        oRf.append(0)
+    if abs(df_limb['H'][i]-df_limb['H'].mean())>th:
+        oH.append(1)
+    else:
+        oH.append(0)
+    
+for index,j in df.iterrows():
+    
+    for k in range(3):
+        if oLul[index]==0 and oH[index]==0:
+            LHx=df['LH_x'].iloc[index]
+            LHy=df['LH_y'].iloc[index]
+            LHz=df['LH_z'].iloc[index]
+        df['LH_x'].iloc[index]=LHx
+        df['LH_y'].iloc[index]=LHy
+        df['LH_z'].iloc[index]=LHz
+        
+    for k in range(3):
+        if oLll[index]==0 and oLul[index]==0:
+            LKx=df['LK_x'].iloc[index]
+            LKy=df['LK_y'].iloc[index]
+            LKz=df['LK_z'].iloc[index]
+        df['LK_x'].iloc[index]=LKx
+        df['LK_y'].iloc[index]=LKy
+        df['LK_z'].iloc[index]=LKz
+
+    for k in range(3):
+        if oLll[index]==0 and oLf[index]==0:
+            LAx=df['LA_x'].iloc[index]
+            LAy=df['LA_y'].iloc[index]
+            LAz=df['LA_z'].iloc[index]
+        df['LA_x'].iloc[index]=LAx
+        df['LA_y'].iloc[index]=LAy
+        df['LA_z'].iloc[index]=LAz
+
+    for k in range(3):
+        if oLf[index]==0:
+            LFx=df['LT_x'].iloc[index]
+            LFy=df['LT_y'].iloc[index]
+            LFz=df['LT_z'].iloc[index]
+        df['LT_x'].iloc[index]=LFx
+        df['LT_y'].iloc[index]=LFy
+        df['LT_z'].iloc[index]=LFz
+
+    for k in range(3):
+            if oRul[index]==0 and oH[index]==0:
+                RHx=df['RH_x'].iloc[index]
+                RHy=df['RH_y'].iloc[index]
+                RHz=df['RH_z'].iloc[index]
+            df['RH_x'].iloc[index]=RHx
+            df['RH_y'].iloc[index]=RHy
+            df['RH_z'].iloc[index]=RHz
+        
+    for k in range(3):
+        if oRll[index]==0 and oRul[index]==0:
+            RKx=df['RK_x'].iloc[index]
+            RKy=df['RK_y'].iloc[index]
+            RKz=df['RK_z'].iloc[index]
+        df['RK_x'].iloc[index]=RKx
+        df['RK_y'].iloc[index]=RKy
+        df['RK_z'].iloc[index]=RKz
+
+
+    for k in range(3):
+        if oRll[index]==0 and oRf[index]==0:
+            RAx=df['RA_x'].iloc[index]
+            RAy=df['RA_y'].iloc[index]
+            RAz=df['RA_z'].iloc[index]
+        df['RA_x'].iloc[index]=RAx
+        df['RA_y'].iloc[index]=RAy
+        df['RA_z'].iloc[index]=RAz
+
+
+    for k in range(3):
+        if oRf[index]==0:
+            RFx=df['RT_x'].iloc[index]
+            RFy=df['RT_y'].iloc[index]
+            RFz=df['RT_z'].iloc[index]
+        df['RT_x'].iloc[index]=RFx
+        df['RT_y'].iloc[index]=RFy
+        df['RT_z'].iloc[index]=RFz
+
+
+df.to_csv('mpipe.csv')
