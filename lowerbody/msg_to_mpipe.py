@@ -11,8 +11,8 @@ from support.funcs import *
 import pandas as pd
 
 # Setting the parameters of the stream
-h=480 #720 
-w=640 #1280
+h=720 
+w=1280
 fps=30
 windowscale=0.6
 
@@ -25,7 +25,7 @@ holistic_model = mp_holistic.Holistic(
 
 # Initializing the landmark lists
 LH, LK, LA, LT, RH, RK, RA, RT = [],[],[],[],[],[],[],[]
-M=[]
+TR=[]
  
 # Initializing the drawing utils for drawing the facial landmarks on image
 mp_drawing = mp.solutions.drawing_utils
@@ -133,12 +133,12 @@ for i in cpth:
         try:
             Smid=midpoint([dic[23]['x']*w,dic[23]['y']*h],[dic[24]['x']*w,dic[24]['y']*h])
             perpx=int(Smid[0])
-            perpy=(int(Smid[1])-25)
+            perpy=(int(Smid[1])-50)
 
             cv2.circle(color_image,(perpx,perpy) , 5, (0, 0, 255), 2)
-            M.append([perpx,perpy])     #in uv format  
+            TR.append([perpx,perpy])     #in uv format  
         except:
-            M.append(np.nan)
+            TR.append(np.nan)
         try:
             draw_box(color_image,LH[c],LK[c])
             draw_box(color_image,LK[c],LA[c])
@@ -198,7 +198,7 @@ for unpacked in unpacker:
 
 timestamps=prm
 
-land_marks={'LH':LH,'LK':LK,'LA':LA,'LT':LT,'RH':RH,'RK':RK,'RA':RA,'RT':RT}
+land_marks={'LH':LH,'LK':LK,'LA':LA,'LT':LT,'RH':RH,'RK':RK,'RA':RA,'RT':RT,'TR':TR}
 
 pos=np.array(pos)
 print(pos.shape)
