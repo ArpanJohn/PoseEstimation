@@ -17,8 +17,8 @@ dtime=[]
 ctime=[]
 
 # Setting the parameters of the stream
-h=480
-w=640
+h=480 # 720 
+w=640 # 1280
 fps=30
 windowscale=1
 
@@ -40,7 +40,7 @@ class rec:
         self.f=self.f+1
         if fileCounter == 1:
             self.rnd = random.randint(999)
-            self.sessionName = "Session " + self.tm1 + "_" + self.tm2 + "_" + str(self.rnd)+str(self.f)
+            self.sessionName = "Session_" + self.tm1 + "_" + self.tm2 + "_" + str(self.rnd)+str(self.f)
             self.sessionDir = os.path.join(self.savingDir, self.sessionName)
             self.temp_save = os.path.join(self.temp_dir, self.sessionName)
             os.mkdir(self.sessionDir)
@@ -77,15 +77,18 @@ class rec:
 
         self.xy = [w,h]
 
+        # Setting counters
         self.counter = 1
         self.fileCounter = 1
 
+        # Creating necessary files
         self.createFile(self.fileCounter)
         p_packed = msgp.packb(self.xy)
         self.paramFile.write(p_packed)
         p_packed = msgp.packb(2)
         self.paramFile.write(p_packed)
 
+        # Initializing variables to calculate display fps
         new_frame_time = 0
         prev_frame_time = 0
         
@@ -99,8 +102,9 @@ class rec:
         pipeline_wrapper = rs.pipeline_wrapper(pipeline)
         pipeline_profile = config.resolve(pipeline_wrapper)
         device = pipeline_profile.get_device()
-        # device_product_line = str(device.get_info(rs.camera_info.product_line))
+        device_product_line = str(device.get_info(rs.camera_info.product_line))
 
+        # Checking if there is an RGB camera
         found_rgb = False
         for s in device.sensors:
             if s.get_info(rs.camera_info.name) == 'RGB Camera':
@@ -110,6 +114,7 @@ class rec:
             print("The demo requires Depth camera with Color sensor")
             exit(0)
 
+        # Starting the stream for depth/color cameras
         config.enable_stream(rs.stream.depth, w, h, rs.format.z16, fps)
 
         config.enable_stream(rs.stream.color, w, h, rs.format.bgr8, fps)
@@ -131,6 +136,7 @@ class rec:
             c=0
 
             while True:
+                # Checking if there are more frames
                 frame_present, frameset = pipeline.try_wait_for_frames()
                     
                 #End loop once video finishes
@@ -139,6 +145,8 @@ class rec:
 
                 # Wait for a coherent pair of frames: depth and color
                 frames = pipeline.wait_for_frames()
+
+                # Aligning the depth and color frames
                 aligned_frames = align.process(frames)
                 depth_frame = frames.get_depth_frame()
                 color_frame = frames.get_color_frame()
@@ -161,10 +169,9 @@ class rec:
 
                 # Finding the dimensions of the depth and colour image
                 depth_colormap_dim = depth_colormap.shape
-                color_colormap_dim = color_image.shape
+                color_colormap_dim = color_image.shape          
 
-                
-
+                # time of new frame
                 new_frame_time = time.time()
 
                 # Calculating the point cloud
@@ -176,15 +183,18 @@ class rec:
                     verts = np.asanyarray(v).view(np.float32)
                     xyzpos=verts.reshape(h,w, 3)  # xyz
                     xyzpos=xyzpos.astype(np.float16)
- 
                 except:
                     print(type(v))
 
+                # Saving frames to msgpack files
                 rec.save_frames(color_image, xyzpos, 
                                (rs.frame.get_frame_metadata(depth_frame,rs.frame_metadata_value.time_of_arrival)), 
                                 self.colourfile, self.depthfile, self.paramFile)
 
+                # Counting frames in each msgpack
                 self.counter = self.counter + 1
+
+                # calculating fps for display
                 fps = 1 / (new_frame_time - prev_frame_time)
                 prev_frame_time = new_frame_time
 
@@ -195,7 +205,11 @@ class rec:
                 # resizing for display
                 color_image=cv2.resize(color_image, (int(w*windowscale),int(h*windowscale)))
                 depth_colormap=cv2.resize(depth_colormap, (int(w*windowscale),int(h*windowscale)))
+
+                # Stacking to display both color and depth images
                 images =np.hstack((color_image, depth_colormap))
+
+                # When 90 frames in one .msgpack file, open a new file
                 if self.counter == 90:
                     self.fileCounter = self.fileCounter + 1
                     self.colourfile.close()
@@ -209,6 +223,8 @@ class rec:
                 if cv2.waitKey(5) & 0xFF == ord('q'):
                     break
                 c+=1
+
+                # Saving the time of depth and color frame
                 dtime.append(rs.frame.get_frame_metadata(depth_frame,rs.frame_metadata_value.time_of_arrival))
                 ctime.append(rs.frame.get_frame_metadata(color_frame,rs.frame_metadata_value.time_of_arrival))
                 
@@ -223,10 +239,11 @@ run=rec()
 
 import matplotlib.pyplot as plt
 
+# Print the duration of the recording
 print('dtime duration',(dtime[-1]-dtime[0])/1000,'s')
 print('ctime duration',(ctime[-1]-ctime[0])/1000,'s')
 
-
+# Show the graph of time of arrival of each frame (should be linear)
 plt.plot(range(len(dtime)),dtime)
 plt.plot(range(len(dtime)),ctime)
 plt.legend(['d','c'])
