@@ -154,7 +154,15 @@ for i in cpth:
             except:
                 pass
         except:
-            pass
+            LH.append(np.nan)
+            LK.append(np.nan)
+            LA.append(np.nan)
+            LT.append(np.nan)
+            RH.append(np.nan)
+            RK.append(np.nan)
+            RA.append(np.nan)
+            LT.append(np.nan)
+            TR.append(np.nan)
 
         # Enter key 'q' to break the loopqq
         if cv2.waitKey(5) & 0xFF == ord('q'):
