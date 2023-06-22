@@ -7,7 +7,7 @@ import glob
 import os
 import matplotlib.pyplot as plt
 
-pth = 'path'
+pth = r"C:\Users\arpan\OneDrive\Documents\internship\rec_program\dummy_rec\gpane"
 
 lst = os.listdir(pth)
 vid_name = lst[-1]
@@ -31,10 +31,9 @@ for i in cpth:
     unpacker = msgp.Unpacker(col_file, object_hook=mpn.decode)
     for unpacked in unpacker:
          c+=1
-         unpacked=cv2.flip(unpacked,1)
          
          img.append(unpacked)
-        #  cv2.imshow("aurco", unpacked)
+         cv2.imshow("aurco", unpacked)
          if cv2.waitKey(1) & 0xFF == ord('q'):
               break
          try:
@@ -47,8 +46,6 @@ for i in cpth:
 
 cv2.destroyAllWindows()
 
-print(len(img))
-
 pos = []
 c=0
 for i in campth:
@@ -57,22 +54,20 @@ for i in campth:
     unpacker = None
     unpacker = msgp.Unpacker(depth_file, object_hook=mpn.decode)
     for unpacked in unpacker:
-         c+=1       
-         unpacked=cv2.flip(unpacked,1)
-
-         pos.append(unpacked)
-         if np.all(pos[-1]) == -1:
-             cv2.destroyAllWindows()
-             break
-        #  cv2.imshow("aurco", unpacked)
-         if cv2.waitKey(1) & 0xFF == ord('q'):
-             break
-         try:
-            if (unpacked)==-1:
-                cv2.destroyAllWindows()
-                break
-         except:
-             continue
+        c+=1       
+        pos.append(unpacked)
+        if np.all(pos[-1]) == -1:
+            cv2.destroyAllWindows()
+            break
+        # cv2.imshow("aurco", unpacked)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+        try:
+           if (unpacked)==-1:
+               cv2.destroyAllWindows()
+               break
+        except:
+            continue
     depth_file.close()
 
 cv2.destroyAllWindows()

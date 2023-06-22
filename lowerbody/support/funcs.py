@@ -211,7 +211,7 @@ def read_df_csv(filename, offset=2):
 
     for id, i in enumerate(col_names):
         if not i.islower():
-            col_names[id] = i.lower()
+            col_names[id] = i
     
     for i in col_names:
         df_headers.append(i + "_x")

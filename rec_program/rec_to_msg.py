@@ -163,20 +163,7 @@ class rec:
                 depth_colormap_dim = depth_colormap.shape
                 color_colormap_dim = color_image.shape
 
-                # If depth and color resolutions are different, resize color image to match depth image for display
-                if depth_colormap_dim != color_colormap_dim:
-                    color_image = cv2.resize(color_image, dsize=(depth_colormap_dim[1], depth_colormap_dim[0]), interpolation=cv2.INTER_AREA)
-
-                # resizing for display
-                color_image=cv2.resize(color_image, (int(w*windowscale),int(h*windowscale)))
-                depth_colormap=cv2.resize(depth_colormap, (int(w*windowscale),int(h*windowscale)))
-                images =np.hstack((color_image, depth_colormap))
-                if self.counter == 90:
-                    self.fileCounter = self.fileCounter + 1
-                    self.colourfile.close()
-                    self.depthfile.close()
-                    self.createFile(self.fileCounter)
-                    self.counter = 1
+                
 
                 new_frame_time = time.time()
 
@@ -200,6 +187,22 @@ class rec:
                 self.counter = self.counter + 1
                 fps = 1 / (new_frame_time - prev_frame_time)
                 prev_frame_time = new_frame_time
+
+                # If depth and color resolutions are different, resize color image to match depth image for display
+                if depth_colormap_dim != color_colormap_dim:
+                    color_image = cv2.resize(color_image, dsize=(depth_colormap_dim[1], depth_colormap_dim[0]), interpolation=cv2.INTER_AREA)
+
+                # resizing for display
+                color_image=cv2.resize(color_image, (int(w*windowscale),int(h*windowscale)))
+                depth_colormap=cv2.resize(depth_colormap, (int(w*windowscale),int(h*windowscale)))
+                images =np.hstack((color_image, depth_colormap))
+                if self.counter == 90:
+                    self.fileCounter = self.fileCounter + 1
+                    self.colourfile.close()
+                    self.depthfile.close()
+                    self.createFile(self.fileCounter)
+                    self.counter = 1
+                    
                 # Show images
                 cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
                 cv2.imshow('RealSense', images)
