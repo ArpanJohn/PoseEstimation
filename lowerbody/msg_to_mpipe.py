@@ -133,7 +133,7 @@ for i in cpth:
             try:
                 RT.append([dic[32]['x']*w,dic[32]['y']*h])
             except:
-                RT.append(np.nan)
+                LT.append(np.nan)
             try:
                 Smid=midpoint([dic[23]['x']*w,dic[23]['y']*h],[dic[24]['x']*w,dic[24]['y']*h])
                 perpx=int(Smid[0])
@@ -206,8 +206,6 @@ timestamps=prm
 
 land_marks={'LH':LH,'LK':LK,'LA':LA,'LT':LT,'RH':RH,'RK':RK,'RA':RA,'RT':RT,'TR':TR}
 
-pos=np.array(pos)
-print(pos.shape)
 df=pd.DataFrame()
 xyz=['_x','_y','_z']
 
