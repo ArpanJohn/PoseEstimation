@@ -148,12 +148,12 @@ print('rotmat : ',rotMat)
 print('origin : ',cento)
 
 # Saving the roation Matrix and the origin to files
-with open(r'D435_rotmat.txt', 'w') as fp:
+with open(r'lowerbody\D435_rotmat.txt', 'w') as fp:
     for item in rotMat:
         # write each item on a new line
         fp.write("%s\n" % item)
 
-with open(r'D435_org.txt', 'w') as fp:
+with open(r'lowerbody\D435_org.txt', 'w') as fp:
     for item in cento:
         # write each item on a new line
         fp.write("%s\n" % item)

@@ -12,10 +12,10 @@ import pandas as pd
 from natsort import natsorted
 
 # Setting the parameters of the stream
-h=720 
-w=1280
+h=480 #720 
+w=640 #1280
 fps=30
-windowscale=0.6
+windowscale=1
 
 # Initializing the landmark lists
 LH, LK, LA, LT, RH, RK, RA, RT = [],[],[],[],[],[],[],[]
@@ -47,7 +47,6 @@ cpth = glob.glob(targetPattern_colour)
 cpth=natsorted(cpth)
 campth=natsorted(campth)
 
-img = []
 c=0
 
 # Initializing the model to locate the landmarks
@@ -515,4 +514,4 @@ for index,j in df.iterrows():
         df['RT_z'].iloc[index]=RFz
 
 
-df.to_csv('mpipe.csv',index=False)
+df.to_csv('lowerbody\mpipe.csv',index=False)
