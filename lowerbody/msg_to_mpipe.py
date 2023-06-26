@@ -11,10 +11,6 @@ from support.funcs import *
 import pandas as pd
 from natsort import natsorted
 
-# Setting the parameters of the stream
-h=480 #720 
-w=640 #1280
-fps=30
 windowscale=1
 
 # Initializing the landmark lists
@@ -43,6 +39,28 @@ ppth = glob.glob(targetPattern_param)
 
 targetPattern_colour = f"{pth}\\COLOUR*"
 cpth = glob.glob(targetPattern_colour)
+
+#obtaining parameters and list time_stamps
+p = open(ppth[0], "rb")
+unpacker=None
+unpacker = msgp.Unpacker(p, object_hook=mpn.decode)
+prm = []
+f=0
+ps = []
+print('unpacking param file')
+for unpacked in unpacker:
+    f+=1
+    if f<3:
+        ps.append(unpacked)
+        continue
+    prm.append(unpacked)
+timestamps=prm
+
+# Getting the parameters of the recording
+w=ps[0][0]
+h=ps[0][1]
+fps=ps[-1]
+rec_dur=timestamps[-1]-timestamps[0]
 
 cpth=natsorted(cpth)
 campth=natsorted(campth)
@@ -197,19 +215,6 @@ for i in campth:
 cv2.destroyAllWindows()
 pos=np.array(pos)
 print(pos.shape)
-
-#obtaining list time_stamps
-p = open(ppth[0], "rb")
-unpacker=None
-unpacker = msgp.Unpacker(p, object_hook=mpn.decode)
-prm = []
-f=0
-for unpacked in unpacker:
-    f+=1
-    if f<3:
-        continue
-    prm.append(unpacked[0]/1000)
-timestamps=prm
 
 land_marks={'LH':LH,'LK':LK,'LA':LA,'LT':LT,'RH':RH,'RK':RK,'RA':RA,'RT':RT,'TR':TR}
 
