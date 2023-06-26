@@ -10,26 +10,102 @@ import time
 from support.funcs import *
 from datetime import date, datetime
 from numpy import random
+import threading
+from queue import Queue
+import glob
+import matplotlib.pyplot as plt
 
 now = datetime.now()
 today = date.today()
-dtime=[]
-ctime=[]
+SessDir=[]
 
-# Setting the parameters of the stream
-h=480 # 720 
-w=640 # 1280
-fps=30
-windowscale=1
+stop = Queue()
 
-class rec:
-    def __init__(self, *args, **kwargs):
+class rec(threading.Thread):
+    def __init__(self, threadID, name, counter):
+        stop.put(False)
+        # Setting the parameters of the stream
+        self.h=720
+        self.w=1280
+        self.fps=30
+        self.windowscale=1
+
+        threading.Thread.__init__(self)
+        self.threadID=threadID
         self.f=0
-        worker = self.readframe()
 
+    def run(self):
+        # running the first thread for recording 
+        print ("Starting " + self.name)
+        if self.threadID == 1:
+            self.readframe()
+
+        # running the the second thread for calculating pointcloud and saving
+        if self.threadID == 2:
+
+            # saving resolution as a list to add to parameters file
+            self.xy = [self.w,self.h]
+            
+            # Setting counters
+            self.counter = 1
+            self.fileCounter = 1
+
+            # Creating necessary files
+            self.createFile(self.fileCounter)
+
+            # Saving stream parameters to parameters file
+            p_packed = msgp.packb(self.xy)
+            self.paramFile.write(p_packed)
+            p_packed = msgp.packb(self.fps)
+            self.paramFile.write(p_packed)
+
+        
+            while not stop.get():
+                # Initializing the point cloud object
+                pc = rs.pointcloud()
+
+                # Get color image and depth frame from queue to calculate pointcloud and save to files     
+                while not color_image_queue.empty():
+                    # Getting the frames from queue
+                    color_image=color_image_queue.get()
+                    depth_frame=depth_frame_queue.get()
+
+                    # getting the time stamp of the depth frame
+                    timestamp=(rs.frame.get_frame_metadata(depth_frame,rs.frame_metadata_value.time_of_arrival))
+
+                    # Calculating the pointcloud
+                    try:
+                        points = pc.calculate(depth_frame)
+                        v = points.get_vertices()
+                        verts = np.asanyarray(v).view(np.float32)
+                        xyzpos=verts.reshape(self.h,self.w, 3)  # xyz
+                        xyzpos=xyzpos.astype(np.float16)            
+                    except:
+                        print('error in pointcloud calculation')
+
+                    # Saving frames to msgpack files
+                    rec.save_frames(color_image, xyzpos, timestamp, 
+                                    self.colourfile, self.depthfile, self.paramFile)
+                    
+                    # Counting frames in each msgpack
+                    self.counter = self.counter + 1
+
+                    # When 90 frames in one .msgpack file, open a new file
+                    if self.counter == 90:
+                        self.fileCounter = self.fileCounter + 1
+                        self.colourfile.close()
+                        self.depthfile.close()
+                        self.createFile(self.fileCounter)
+                        self.counter = 1   
+
+            # saving the directory for saving the time graph
+            SessDir.append(self.sessionDir)
+            self.paramFile.close()
+        print ("Exiting " + self.name)
 
     def createFile(self, fileCounter):
-        global fps,w,h
+
+        # gettin the time,date,etc for session directory and file names
         self.pFileName = 'test'
         self.tm1 = today.strftime("%d-%m-%y")
         self.tm2 = now.strftime("%H-%M-%S")
@@ -38,6 +114,8 @@ class rec:
         self.savingDir = r'C:\Users\arpan\OneDrive\Documents\internship\rec_program\savdir'
         self.temp_dir = r'C:\Users\arpan\OneDrive\Documents\internship\rec_program\temp_dir'
         self.f=self.f+1
+
+        # creating the files
         if fileCounter == 1:
             self.rnd = random.randint(999)
             self.sessionName = "Session_" + self.tm1 + "_" + self.tm2 + "_" + str(self.rnd)+str(self.f)
@@ -50,11 +128,14 @@ class rec:
 
             self.paramFile = open(self.parmsFileName, 'wb')
 
+        # Getting the file names
         self.commonName = self.pFileName + " " + self.tM + " " + str(self.rnd)
         self.depthfilename = self.sessionDir + "/" + "DEPTH" + "_" + self.tm + "_" + str(
             self.rnd) + "_" + str(fileCounter) + ".msgpack"
         self.colourfilename = self.sessionDir + "/" + "COLOUR" + "_" + self.tm + "_" + str(
             self.rnd) + "_" + str(fileCounter) + ".msgpack"
+        
+        # Opening depth and colour file for writing
         self.depthfile = open(self.depthfilename, 'wb')
         self.colourfile = open(self.colourfilename, 'wb')
 
@@ -62,38 +143,20 @@ class rec:
 
             
     def save_frames(colorImg, depthImg, milliseconds, colorFile, depthFile, paramsfile):
+        # saving the depth information
         d_packed = msgp.packb(depthImg, default=mpn.encode)
         depthFile.write(d_packed)
 
+        # saving the color information
         c_packed = msgp.packb(colorImg, default=mpn.encode)
         colorFile.write(c_packed)
 
-        prm = [milliseconds]
+        # saving the time information
+        prm = milliseconds/1000 # converting miliseconds to seconds
         p_packed = msgp.packb(prm)
         paramsfile.write(p_packed)
 
     def readframe(self):
-        global fps
-
-        self.xy = [w,h]
-
-        # Setting counters
-        self.counter = 1
-        self.fileCounter = 1
-
-        # Creating necessary files
-        self.createFile(self.fileCounter)
-        p_packed = msgp.packb(self.xy)
-        self.paramFile.write(p_packed)
-        p_packed = msgp.packb(2)
-        self.paramFile.write(p_packed)
-
-        # Initializing variables to calculate display fps
-        new_frame_time = 0
-        prev_frame_time = 0
-        
-        # Creating pointcloud object
-        pc = rs.pointcloud()
         # Configure depth and color streams
         pipeline = rs.pipeline()
         config = rs.config()
@@ -115,26 +178,21 @@ class rec:
             exit(0)
 
         # Starting the stream for depth/color cameras
-        config.enable_stream(rs.stream.depth, w, h, rs.format.z16, fps)
+        config.enable_stream(rs.stream.color, self.w, self.h, rs.format.bgr8, self.fps)
 
-        config.enable_stream(rs.stream.color, w, h, rs.format.bgr8, fps)
+        config.enable_stream(rs.stream.depth, self.w, self.h, rs.format.z16, self.fps)
 
         try:
             # Start streaming from file
-            profile=pipeline.start(config)
-            
-            # Create colorizer object
-            colorizer = rs.colorizer()
+            profile=pipeline.start(config)    
 
+            # initializing alignment
             align_to = rs.stream.color
             align = rs.align(align_to)
 
-            # Initializing the list of timestamps
-            timestamps=[]
-
             # Number of frames 
             c=0
-
+            
             while True:
                 # Checking if there are more frames
                 frame_present, frameset = pipeline.try_wait_for_frames()
@@ -153,80 +211,36 @@ class rec:
                 if not depth_frame or not color_frame:
                     continue                                
 
-                # get timestamp of frame
-                timestamps.append((rs.frame.get_frame_metadata(depth_frame,rs.frame_metadata_value.time_of_arrival)))
-
                 # Get aligned frames
                 aligned_depth_frame = aligned_frames.get_depth_frame() 
                 color_frame = aligned_frames.get_color_frame()
 
                 # Convert images to numpy arrays
-                depth_image = np.asanyarray(aligned_depth_frame.get_data()) 
                 color_image = np.asanyarray(color_frame.get_data()) 
 
-                # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
-                depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
+                # Signal that thread1 is running
+                stop.put(False)
 
-                # Finding the dimensions of the depth and colour image
-                depth_colormap_dim = depth_colormap.shape
-                color_colormap_dim = color_image.shape          
+                # limit size of queues to 10
+                while color_image_queue.qsize()>10:
+                    bin=color_image_queue.get()
+                    bin=depth_frame_queue.get()
+                    bin=None
 
-                # time of new frame
-                new_frame_time = time.time()
-
-                # Calculating the point cloud
-                mapped_frame = color_frame
-                pc.map_to(mapped_frame)  
-                try:
-                    points = pc.calculate(aligned_depth_frame)
-                    v = points.get_vertices()
-                    verts = np.asanyarray(v).view(np.float32)
-                    xyzpos=verts.reshape(h,w, 3)  # xyz
-                    xyzpos=xyzpos.astype(np.float16)
-                except:
-                    print(type(v))
-
-                # Saving frames to msgpack files
-                rec.save_frames(color_image, xyzpos, 
-                               (rs.frame.get_frame_metadata(depth_frame,rs.frame_metadata_value.time_of_arrival)), 
-                                self.colourfile, self.depthfile, self.paramFile)
-
-                # Counting frames in each msgpack
-                self.counter = self.counter + 1
-
-                # calculating fps for display
-                fps = 1 / (new_frame_time - prev_frame_time)
-                prev_frame_time = new_frame_time
-
-                # If depth and color resolutions are different, resize color image to match depth image for display
-                if depth_colormap_dim != color_colormap_dim:
-                    color_image = cv2.resize(color_image, dsize=(depth_colormap_dim[1], depth_colormap_dim[0]), interpolation=cv2.INTER_AREA)
+                # putting the images in the queues
+                color_image_queue.put(color_image)
+                depth_frame_queue.put(aligned_depth_frame)
 
                 # resizing for display
-                color_image=cv2.resize(color_image, (int(w*windowscale),int(h*windowscale)))
-                depth_colormap=cv2.resize(depth_colormap, (int(w*windowscale),int(h*windowscale)))
-
-                # Stacking to display both color and depth images
-                images =np.hstack((color_image, depth_colormap))
-
-                # When 90 frames in one .msgpack file, open a new file
-                if self.counter == 90:
-                    self.fileCounter = self.fileCounter + 1
-                    self.colourfile.close()
-                    self.depthfile.close()
-                    self.createFile(self.fileCounter)
-                    self.counter = 1
+                color_image=cv2.resize(color_image, (int(self.w*self.windowscale),int(self.h*self.windowscale)))
                     
                 # Show images
                 cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
-                cv2.imshow('RealSense', images)
+                cv2.imshow('RealSense', color_image)
                 if cv2.waitKey(5) & 0xFF == ord('q'):
+                    stop.put(True)
                     break
                 c+=1
-
-                # Saving the time of depth and color frame
-                dtime.append(rs.frame.get_frame_metadata(depth_frame,rs.frame_metadata_value.time_of_arrival))
-                ctime.append(rs.frame.get_frame_metadata(color_frame,rs.frame_metadata_value.time_of_arrival))
                 
         finally:
 
@@ -234,19 +248,68 @@ class rec:
             pipeline.stop()
             cv2.destroyAllWindows()
 
+threadLock = threading.Lock()
+threads=[]
 
-run=rec()
+# Initializing the queues
+color_image_queue, depth_frame_queue=Queue(),Queue()
+param_queue=Queue()
+        
+# Create new threads
+thread1 = rec(1, "Thread-1", 1)
+thread2 = rec(2, "Thread-2", 2)
 
-import matplotlib.pyplot as plt
+# Start new Threads
+thread1.start()
+time.sleep(0.01)
+thread2.start()
 
-# Print the duration of the recording
-print('dtime duration',(dtime[-1]-dtime[0])/1000,'s')
-print('ctime duration',(ctime[-1]-ctime[0])/1000,'s')
+# Add threads to thread list
+threads.append(thread1)
+threads.append(thread2)
+
+# Wait for all threads to complete
+for t in threads:
+    t.join()
+
+# Path to session folder
+pth = SessDir[0]
+
+# Getting the parameter file
+targetPattern_param = f"{pth}\\PARAM*"
+ppth = glob.glob(targetPattern_param)
+
+#obtaining parameters and list time_stamps
+p = open(ppth[0], "rb")
+unpacker=None
+unpacker = msgp.Unpacker(p, object_hook=mpn.decode)
+prm = []
+f=0
+ps = []
+print('unpacking param file')
+for unpacked in unpacker:
+    f+=1
+    if f<3:
+        ps.append(unpacked)
+        continue
+    prm.append(unpacked)
+timestamps=prm
+
+# Getting the parameters of the recording
+w=ps[0][0]
+h=ps[0][1]
+fps=ps[-1]
+rec_dur=timestamps[-1]-timestamps[0]
+
+
+# Print the parameters of the recording
+print(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
 
 # Show the graph of time of arrival of each frame (should be linear)
-plt.plot(range(len(dtime)),dtime)
-plt.plot(range(len(dtime)),ctime)
-plt.legend(['d','c'])
+plt.plot(range(len(timestamps)),timestamps)
+plt.title(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
+# plt.legend(['d','c'])
+plt.xlabel('frame')
+plt.ylabel('epoch time in seconds')
+plt.savefig(pth+'/time_graph.jpg')
 plt.show()
-
-
