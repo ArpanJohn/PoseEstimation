@@ -14,6 +14,7 @@ import threading
 from queue import Queue
 import glob
 import matplotlib.pyplot as plt
+import re
 
 # getting Date and time
 now = datetime.now()
@@ -45,9 +46,6 @@ class rec(threading.Thread):
 
         # running the the second thread for calculating pointcloud and saving
         if self.threadID == 2:
-
-            # saving resolution as a list to add to parameters file
-            self.xy = [self.w,self.h]
             
             # Setting counters
             self.counter = 1
@@ -57,37 +55,22 @@ class rec(threading.Thread):
             self.createFile(self.fileCounter)
 
             # Saving stream parameters to parameters file
-            p_packed = msgp.packb(self.xy)
+            parameters=param_queue.get()
+            p_packed = msgp.packb(str(parameters)+str(self.fps))
             self.paramFile.write(p_packed)
-            p_packed = msgp.packb(self.fps)
-            self.paramFile.write(p_packed)
-
         
             while not stop.get():
-                # Initializing the point cloud object
-                pc = rs.pointcloud()
-
                 # Get color image and depth frame from queue to calculate pointcloud and save to files     
                 while not color_image_queue.empty():
                     # Getting the frames from queue
                     color_image=color_image_queue.get()
-                    depth_frame=depth_frame_queue.get()
+                    depth_image=depth_image_queue.get()
 
                     # getting the time stamp of the depth frame
-                    timestamp=(rs.frame.get_frame_metadata(depth_frame,rs.frame_metadata_value.time_of_arrival))
-
-                    # Calculating the pointcloud
-                    try:
-                        points = pc.calculate(depth_frame)
-                        v = points.get_vertices()
-                        verts = np.asanyarray(v).view(np.float32)
-                        xyzpos=verts.reshape(self.h,self.w, 3)  # xyz
-                        xyzpos=xyzpos.astype(np.float16)            
-                    except:
-                        print('error in pointcloud calculation')
+                    timestamp=param_queue.get()
 
                     # Saving frames to msgpack files
-                    rec.save_frames(color_image, xyzpos, timestamp, 
+                    rec.save_frames(color_image, depth_image, timestamp, 
                                     self.colourfile, self.depthfile, self.paramFile)
                     
                     # Counting frames in each msgpack
@@ -187,7 +170,14 @@ class rec(threading.Thread):
 
         try:
             # Start streaming from file
-            profile=pipeline.start(config)    
+            profile=pipeline.start(config)   
+
+            # Getting depth intrinsics
+            profiled = profile.get_stream(rs.stream.depth)
+            profile1d=profiled.as_video_stream_profile() 
+            intr = profile1d.get_intrinsics()   
+            intr=str(intr) 
+            param_queue.put('depth intrinsics:'+intr) 
 
             # initializing alignment
             align_to = rs.stream.color
@@ -220,6 +210,7 @@ class rec(threading.Thread):
 
                 # Convert images to numpy arrays
                 color_image = np.asanyarray(color_frame.get_data()) 
+                depth_image = np.asanyarray(aligned_depth_frame.get_data()) 
 
                 # Signal that thread1 is running
                 stop.put(False)
@@ -227,12 +218,16 @@ class rec(threading.Thread):
                 # limit size of queues to 10
                 while color_image_queue.qsize()>10:
                     bin=color_image_queue.get()
-                    bin=depth_frame_queue.get()
+                    bin=depth_image_queue.get()
+                    bin=param_queue.get()
                     bin=None
 
                 # putting the images in the queues
                 color_image_queue.put(color_image)
-                depth_frame_queue.put(aligned_depth_frame)
+                depth_image_queue.put(depth_image)
+
+                # Putting timestamps in queue
+                param_queue.put(rs.frame.get_frame_metadata(depth_frame,rs.frame_metadata_value.time_of_arrival))
 
                 # resizing for display
                 color_image=cv2.resize(color_image, (int(self.w*self.windowscale),int(self.h*self.windowscale)))
@@ -255,7 +250,7 @@ threadLock = threading.Lock()
 threads=[]
 
 # Initializing the queues
-color_image_queue, depth_frame_queue=Queue(),Queue()
+color_image_queue, depth_image_queue=Queue(),Queue()
 param_queue=Queue()
         
 # Create new threads
@@ -285,25 +280,40 @@ ppth = glob.glob(targetPattern_param)
 #obtaining parameters and list time_stamps
 p = open(ppth[0], "rb")
 unpacker=None
-unpacker = msgp.Unpacker(p, object_hook=mpn.decode)
-prm = []
+unpacker = list(msgp.Unpacker(p, object_hook=mpn.decode))
+timestamps = []
 f=0
 ps = []
-print('unpacking param file')
-for unpacked in unpacker:
-    f+=1
-    if f<3:
-        ps.append(unpacked)
-        continue
-    prm.append(unpacked)
-timestamps=prm
 
 # Getting the parameters of the recording
-w=ps[0][0]
-h=ps[0][1]
-fps=ps[-1]
-rec_dur=timestamps[-1]-timestamps[0]
+parameters=unpacker.pop(0)
 
+# removing formating things
+parameters=parameters.replace('x', ' ')
+parameters=parameters.replace(':', ' ')
+parameters=parameters.replace(']', '')
+parameters=parameters.replace('[', '')
+
+# removing letters
+modified_string = re.sub('[a-zA-Z]', '', parameters)
+modified_string = modified_string.strip()
+
+# splitting the string and assigning the parameters
+params = modified_string.split(' ')
+
+w = params[0]
+h = params[1]
+fps = params[-1]
+
+CX_DEPTH = params[3]
+CY_DEPTH = params[4]
+FX_DEPTH = params[6]
+FY_DEPTH = params[7]
+
+for unpacked in unpacker:
+    timestamps.append(unpacked)
+
+rec_dur=timestamps[-1]-timestamps[0]
 
 # Print the parameters of the recording
 print(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
@@ -311,7 +321,6 @@ print(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'x'+s
 # Show the graph of time of arrival of each frame (should be linear)
 plt.plot(range(len(timestamps)),timestamps)
 plt.title(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
-# plt.legend(['d','c'])
 plt.xlabel('frame')
 plt.ylabel('epoch time in seconds')
 plt.savefig(pth+'/time_graph.jpg')
