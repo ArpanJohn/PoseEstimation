@@ -15,10 +15,12 @@ from queue import Queue
 import glob
 import matplotlib.pyplot as plt
 
+# getting Date and time
 now = datetime.now()
 today = date.today()
-SessDir=[]
 
+# initializing things
+SessDir=[]
 stop = Queue()
 
 class rec(threading.Thread):
@@ -30,6 +32,7 @@ class rec(threading.Thread):
         self.fps=30
         self.windowscale=1
 
+        # Getting threadID
         threading.Thread.__init__(self)
         self.threadID=threadID
         self.f=0
