@@ -12,7 +12,7 @@ import pandas as pd
 from natsort import natsorted
 import re
 
-pth = r"C:\Users\arpan\OneDrive\Documents\internship\rec_program\savdir\Session_27-06-23_09-20-28_8231"
+pth = r"C:\Users\arpan\OneDrive\Documents\internship\rec_program\savdir\Session_27-06-23_11-29-04_3971"
 
 lst = os.listdir(pth)
 vid_name = lst[-1]
@@ -173,12 +173,12 @@ for i in cpth:
                 LI.append([dic[19]['x']*w,dic[19]['y']*h])
 
                 # Drawing the boxes around limbs for occlusion
-                draw_box(color_image,LS[c],LE[c])
-                draw_box(color_image,RS[c],RE[c])
-                draw_box(color_image,LE[c],LW[c])
-                draw_box(color_image,RE[c],RW[c])
-                draw_box(color_image,RW[c],([dic[20]['x']*w,dic[20]['y']*h]),(255,0,255),40)
-                draw_box(color_image,LW[c],([dic[19]['x']*w,dic[19]['y']*h]),(0,255,255),40) 
+                draw_box(color_image,[dic[11]['x']*w,dic[11]['y']*h],[dic[13]['x']*w,dic[13]['y']*h])
+                draw_box(color_image,[dic[12]['x']*w,dic[12]['y']*h],[dic[14]['x']*w,dic[14]['y']*h])
+                draw_box(color_image,[dic[13]['x']*w,dic[13]['y']*h],[dic[15]['x']*w,dic[15]['y']*h])
+                draw_box(color_image,[dic[14]['x']*w,dic[14]['y']*h],[dic[16]['x']*w,dic[16]['y']*h])
+                draw_box(color_image,[dic[16]['x']*w,dic[16]['y']*h],([dic[20]['x']*w,dic[20]['y']*h]),(255,0,255),40)
+                draw_box(color_image,[dic[15]['x']*w,dic[15]['y']*h],([dic[19]['x']*w,dic[19]['y']*h]),(0,255,255),40) 
             except:
                 RI.append(np.nan)
                 LI.append(np.nan)
@@ -200,7 +200,7 @@ for i in cpth:
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
          
-        # cv2.imshow("pose landmarks", color_image)
+        cv2.imshow("pose landmarks", color_image)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
         try:
@@ -222,9 +222,9 @@ for i in campth:
     unpacker = None
     unpacker = msgp.Unpacker(depth_file, object_hook=mpn.decode)
     for unpacked in unpacker:
-         c+=1
-         unpacked=np.asanyarray(unpacked) 
-         pos.append(unpacked)
+        c+=1
+        unpacked=np.asanyarray(unpacked) 
+        pos.append(unpacked)
     depth_file.close()
 
 cv2.destroyAllWindows()
@@ -508,4 +508,4 @@ for index,j in df.iterrows():
 
 print(df.head())
 
-df.to_csv(pth+'\mpipe.csv',index=False)
+df.to_csv(pth+'\mpipef16.csv',index=False)

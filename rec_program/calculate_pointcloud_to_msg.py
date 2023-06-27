@@ -28,11 +28,12 @@ def createFile(SessDir, fileCounter):
 
 def save_frames(pointcloud, POINTfile):
     # saving the depth information
+    pointcloud=pointcloud.astype(np.float16)
     pc_packed = msgp.packb(pointcloud, default=mpn.encode)
     POINTfile.write(pc_packed)
 
 # Path to session folder
-pth = r"C:\Users\arpan\OneDrive\Documents\internship\rec_program\savdir\Session_27-06-23_09-20-28_8231"
+pth = r"C:\Users\arpan\OneDrive\Documents\internship\rec_program\savdir\Session_27-06-23_11-29-04_3971"
 
 # Getting the COLOR files
 targetPattern_colour = f"{pth}\\COLOUR*"
