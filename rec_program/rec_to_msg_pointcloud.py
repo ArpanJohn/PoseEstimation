@@ -147,10 +147,12 @@ class rec(threading.Thread):
             
     def save_frames(colorImg, depthImg, milliseconds, colorFile, depthFile, paramsfile):
         # saving the depth information
+        depthImg=depthImg.astype(np.float16)
         d_packed = msgp.packb(depthImg, default=mpn.encode)
         depthFile.write(d_packed)
 
         # saving the color information
+        colorImg=colorImg.astype(np.float16)
         c_packed = msgp.packb(colorImg, default=mpn.encode)
         colorFile.write(c_packed)
 

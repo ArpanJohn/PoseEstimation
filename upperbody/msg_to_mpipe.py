@@ -10,12 +10,61 @@ import mediapipe as mp
 from support.funcs import *
 import pandas as pd
 from natsort import natsorted
+import re
 
-# Setting the parameters of the stream
-h=720 
-w=1280
-fps=30
-windowscale=0.6
+pth = r"C:\Users\arpan\OneDrive\Documents\internship\rec_program\savdir\Session_27-06-23_09-20-28_8231"
+
+lst = os.listdir(pth)
+vid_name = lst[-1]
+
+targetPattern = f"{pth}\\POINT*"
+campth = glob.glob(targetPattern)
+
+targetPattern_param = f"{pth}\\PARAM*"
+ppth = glob.glob(targetPattern_param)
+
+targetPattern_colour = f"{pth}\\COLOUR*"
+cpth = glob.glob(targetPattern_colour)
+
+#obtaining parameters and list time_stamps
+p = open(ppth[0], "rb")
+unpacker=None
+unpacker = list(msgp.Unpacker(p, object_hook=mpn.decode))
+timestamps = []
+ps = []
+
+# Getting the parameters of the recording
+parameters=unpacker.pop(0)
+
+# removing formating things
+parameters=parameters.replace('x', ' ')
+parameters=parameters.replace(':', ' ')
+parameters=parameters.replace(']', '')
+parameters=parameters.replace('[', '')
+
+# removing letters
+modified_string = re.sub('[a-zA-Z]', '', parameters)
+modified_string = modified_string.strip()
+
+# splitting the string and assigning the parameters
+params = modified_string.split(' ')
+
+w = int(params[0])
+h = int(params[1])
+fps = int(params[-1])
+
+for unpacked in unpacker:
+    timestamps.append(unpacked)
+
+rec_dur=timestamps[-1]-timestamps[0]
+
+# Print the parameters of the recording
+print(('recording duration '+f"{rec_dur:.3}"+' s'+'\nresolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
+print('number of frames:', len(timestamps))
+
+# Sorting the color and depth files
+cpth=natsorted(cpth)
+campth=natsorted(campth)
 
 # Initializing the landmark lists
 LS, LE, LW, RS, RE, RW, TR = [], [], [], [], [], [], []
@@ -30,24 +79,6 @@ currentTime = 0
 
 frames=0
 
-pth = r"C:\Users\arpan\OneDrive\Documents\internship\rec_program\dummy_rec\Session 21-06-23_11-22-03_8011"
-
-lst = os.listdir(pth)
-vid_name = lst[-1]
-
-targetPattern = f"{pth}\\DEPTH*"
-campth = glob.glob(targetPattern)
-
-targetPattern_param = f"{pth}\\PARAM*"
-ppth = glob.glob(targetPattern_param)
-
-targetPattern_colour = f"{pth}\\COLOUR*"
-cpth = glob.glob(targetPattern_colour)
-
-cpth=natsorted(cpth)
-campth=natsorted(campth)
-
-img = []
 c=0
 
 # Initializing the model to locate the landmarks
@@ -142,7 +173,6 @@ for i in cpth:
                 LI.append([dic[19]['x']*w,dic[19]['y']*h])
 
                 # Drawing the boxes around limbs for occlusion
-                cv2.putText(color_image, str(int(c)), (50, 70), cv2.FONT_HERSHEY_COMPLEX, 1, (0,255,0), 2)
                 draw_box(color_image,LS[c],LE[c])
                 draw_box(color_image,RS[c],RE[c])
                 draw_box(color_image,LE[c],LW[c])
@@ -166,11 +196,11 @@ for i in cpth:
             LI.append(np.nan)
             pass 
 
-        # Enter key 'q' to break the loopqq
+        # Enter key 'q' to break the loop
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
          
-        cv2.imshow("pose landmarks", color_image)
+        # cv2.imshow("pose landmarks", color_image)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
         try:
@@ -201,22 +231,10 @@ cv2.destroyAllWindows()
 pos=np.array(pos)
 print(pos.shape)
 
-#obtaining list time_stamps
-p = open(ppth[0], "rb")
-unpacker=None
-unpacker = msgp.Unpacker(p, object_hook=mpn.decode)
-prm = []
-f=0
-for unpacked in unpacker:
-    f+=1
-    if f<3:
-        continue
-    prm.append(unpacked[0]/1000)
-timestamps=prm
-
 # Dictionary containing landmark names and corresponding values
 land_marks = {'LS': LS, 'LE': LE, 'LW': LW, 'RS': RS, 'RE': RE, 'RW': RW, 'TR': TR}
 
+# pandas dataframe to hold landmark values
 df=pd.DataFrame()
 xyz=['_x','_y','_z']
 
@@ -233,6 +251,8 @@ for key,value in land_marks.items():
                 continue
         df[key+xyz[j]]=pd.Series(data)
 
+# take the stuff out of memory
+pos = None
 # Finding and correcting occlusions based on boxes
 startflag = 0  # Flag to track the starting frame of occlusion
 before_occ = 0  # Frame before occlusion
@@ -281,47 +301,47 @@ for k, j in land_marks.items():
 
 
 # converting mpipe to mocap frame
-rotmat=[]
-org=[]
-with open('D435_rotmat.txt', 'r') as fp:
-    for line in fp:
-        x = line[:-1]
-        x=x.replace(']','')
-        x=x.replace('[','')
-        line=x.split(' ')
-        while ' ' in line:
-            line=line.remove(' ')
-        while '' in line:
-            ind=line.index('')
-            line.pop(ind)
-        x=[]
-        for i in line:
-            x.append(float(i))
-        rotmat.append(x)
-    rotmat=np.array(rotmat)
+# rotmat=[]
+# org=[]
+# with open('D435_rotmat.txt', 'r') as fp:
+#     for line in fp:
+#         x = line[:-1]
+#         x=x.replace(']','')
+#         x=x.replace('[','')
+#         line=x.split(' ')
+#         while ' ' in line:
+#             line=line.remove(' ')
+#         while '' in line:
+#             ind=line.index('')
+#             line.pop(ind)
+#         x=[]
+#         for i in line:
+#             x.append(float(i))
+#         rotmat.append(x)
+#     rotmat=np.array(rotmat)
 
-with open('D435_org.txt', 'r') as fp:
-    for line in fp:
-        x = line[:-1]
-        x=x.replace(']','')
-        x=x.replace('[','')
-        org.append([float(x)])
-    k_org=np.array(org)
+# with open('D435_org.txt', 'r') as fp:
+#     for line in fp:
+#         x = line[:-1]
+#         x=x.replace(']','')
+#         x=x.replace('[','')
+#         org.append([float(x)])
+#     k_org=np.array(org)
 
-for index,j in df.iterrows():
-    for k in range(1,1+7*3,3):
-        point=[]
-        for p in range(k,k+3):
-            point.append(j[p])
-        converted_point=frame_con(point,rotmat,org)
-        # print(converted_point)
-        for o in range(3):
-            df.iloc[index,k+o]=converted_point[o]
+# for index,j in df.iterrows():
+#     for k in range(1,1+7*3,3):
+#         point=[]
+#         for p in range(k,k+3):
+#             point.append(j[p])
+#         converted_point=frame_con(point,rotmat,org)
+#         # print(converted_point)
+#         for o in range(3):
+#             df.iloc[index,k+o]=converted_point[o]
 
 
 # Saving the 3D points of each landmark
 xyz=['x','y','z']
-ls,le,lw,rs,re,rw=[],[],[],[],[],[]
+ls,le,lw,rs,RE,rw=[],[],[],[],[],[]
 
 c=1
 for i,j in df.iterrows():
@@ -362,7 +382,7 @@ for i,j in df.iterrows():
         for p in range(k,k+3):
             point.append(j[p])
         point=np.array(point)        
-        re.append(point)
+        RE.append(point)
 c+=3
 for i,j in df.iterrows():
     for k in range(c,c+3,3):
@@ -378,14 +398,14 @@ le=np.array(le)
 lw=np.array(lw)
 
 rs=np.array(rs) 
-re=np.array(re)
+RE=np.array(RE)
 rw=np.array(rw)
 
 # Finding the distances between the landmarks
 lu=list(ls-le) # Left upper arm
 ll=list(le-lw) # Left lower arm
-ru=list(rs-re) # Rigth upper arm
-rl=list(re-rw) # Right lower arm
+ru=list(rs-RE) # Rigth upper arm
+rl=list(RE-rw) # Right lower arm
 ss=list(rs-ls) # Biacromial length / distance between shoulder
 
 for i in range(len(lu)):
@@ -405,27 +425,26 @@ df_ll['rl']=pd.Series(rl)
 df_ll['ss']=pd.Series(ss)
 
 # occlusion based on limb length
-df_limb=pd.read_csv('limbl.csv')
 olu,oll,oru,orl,oss=[0],[0],[0],[0],[0]
 th=0.10 # 10cm
-for i in range(1,len(df_limb)):
-    if abs(df_limb['lu'][i]-df_limb['lu'].mean())>th:
+for i in range(1,len(df_ll)):
+    if abs(df_ll['lu'][i]-df_ll['lu'].mean())>th:
         olu.append(1)
     else:
         olu.append(0)
-    if abs(df_limb['ll'][i]-df_limb['ll'].mean())>th:
+    if abs(df_ll['ll'][i]-df_ll['ll'].mean())>th:
         oll.append(1)
     else:
         oll.append(0)
-    if abs(df_limb['ru'][i]-df_limb['ru'].mean())>th:
+    if abs(df_ll['ru'][i]-df_ll['ru'].mean())>th:
         oru.append(1)
     else:
         oru.append(0)
-    if abs(df_limb['rl'][i]-df_limb['rl'].mean())>th:
+    if abs(df_ll['rl'][i]-df_ll['rl'].mean())>th:
         orl.append(1)
     else:
         orl.append(0)
-    if abs(df_limb['ss'][i]-df_limb['ss'].mean())>th:
+    if abs(df_ll['ss'][i]-df_ll['ss'].mean())>th:
         oss.append(1)
     else:
         oss.append(0)
@@ -435,57 +454,58 @@ for index,j in df.iterrows():
     
     for k in range(3):
         if oss[index]==0 and olu[index]==0:
-            lsx=df['ls_x'].iloc[index]
-            lsy=df['ls_y'].iloc[index]
-            lsz=df['ls_z'].iloc[index]
-        df['ls_x'].iloc[index]=lsx
-        df['ls_y'].iloc[index]=lsy
-        df['ls_z'].iloc[index]=lsz
+            lsx=df['LS_x'].iloc[index]
+            lsy=df['LS_y'].iloc[index]
+            lsz=df['LS_z'].iloc[index]
+        df['LS_x'].iloc[index]=lsx
+        df['LS_y'].iloc[index]=lsy
+        df['LS_z'].iloc[index]=lsz
         
     for k in range(3):
         if oll[index]==0 and olu[index]==0:
-            lex=df['le_x'].iloc[index]
-            ley=df['le_y'].iloc[index]
-            lez=df['le_z'].iloc[index]
-        df['le_x'].iloc[index]=lex
-        df['le_y'].iloc[index]=ley
-        df['le_z'].iloc[index]=lez
+            lex=df['LE_x'].iloc[index]
+            ley=df['LE_y'].iloc[index]
+            lez=df['LE_z'].iloc[index]
+        df['LE_x'].iloc[index]=lex
+        df['LE_y'].iloc[index]=ley
+        df['LE_z'].iloc[index]=lez
 
     for k in range(3):
         if oll[index]==0:
-            lwx=df['lw_x'].iloc[index]
-            lwy=df['lw_y'].iloc[index]
-            lwz=df['lw_z'].iloc[index]
-        df['lw_x'].iloc[index]=lwx
-        df['lw_y'].iloc[index]=lwy
-        df['lw_z'].iloc[index]=lwz
+            lwx=df['LW_x'].iloc[index]
+            lwy=df['LW_y'].iloc[index]
+            lwz=df['LW_z'].iloc[index]
+        df['LW_x'].iloc[index]=lwx
+        df['LW_y'].iloc[index]=lwy
+        df['LW_z'].iloc[index]=lwz
 
     for k in range(3):
         if oss[index]==0 and oru[index]==0:
-            rsx=df['rs_x'].iloc[index]
-            rsy=df['rs_y'].iloc[index]
-            rsz=df['rs_z'].iloc[index]
-        df['rs_x'].iloc[index]=rsx
-        df['rs_y'].iloc[index]=rsy
-        df['rs_z'].iloc[index]=rsz
+            rsx=df['RS_x'].iloc[index]
+            rsy=df['RS_y'].iloc[index]
+            rsz=df['RS_z'].iloc[index]
+        df['RS_x'].iloc[index]=rsx
+        df['RS_y'].iloc[index]=rsy
+        df['RS_z'].iloc[index]=rsz
 
     for k in range(3):
         if orl[index]==0 and oru[index]==0:
-            rex=df['re_x'].iloc[index]
-            rey=df['re_y'].iloc[index]
-            rez=df['re_z'].iloc[index]
-        df['re_x'].iloc[index]=rex
-        df['re_y'].iloc[index]=rey
-        df['re_z'].iloc[index]=rez
+            rex=df['RE_x'].iloc[index]
+            rey=df['RE_y'].iloc[index]
+            rez=df['RE_z'].iloc[index]
+        df['RE_x'].iloc[index]=rex
+        df['RE_y'].iloc[index]=rey
+        df['RE_z'].iloc[index]=rez
 
     for k in range(3):
         if orl[index]==0 and oru[index]==0:
-            rwx=df['rw_x'].iloc[index]
-            rwy=df['rw_y'].iloc[index]
-            rwz=df['rw_z'].iloc[index]
-        df['rw_x'].iloc[index]=rwx
-        df['rw_y'].iloc[index]=rwy
-        df['rw_z'].iloc[index]=rwz
+            rwx=df['RW_x'].iloc[index]
+            rwy=df['RW_y'].iloc[index]
+            rwz=df['RW_z'].iloc[index]
+        df['RW_x'].iloc[index]=rwx
+        df['RW_y'].iloc[index]=rwy
+        df['RW_z'].iloc[index]=rwz
 
+print(df.head())
 
-df.to_csv('ppperbody\mpipe.csv',index=False)
+df.to_csv(pth+'\mpipe.csv',index=False)

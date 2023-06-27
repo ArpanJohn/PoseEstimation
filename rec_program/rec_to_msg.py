@@ -233,7 +233,6 @@ class rec(threading.Thread):
                 color_image=cv2.resize(color_image, (int(self.w*self.windowscale),int(self.h*self.windowscale)))
                     
                 # Show images
-                cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
                 cv2.imshow('RealSense', color_image)
                 if cv2.waitKey(5) & 0xFF == ord('q'):
                     stop.put(True)
@@ -257,6 +256,18 @@ param_queue=Queue()
 thread1 = rec(1, "Thread-1", 1)
 thread2 = rec(2, "Thread-2", 2)
 
+# timer
+# timer=int(input('enter timer'))
+
+# while timer:  
+#     array = np.zeros((720, 1280, 3),dtype = np.uint8)
+#     blank_display=cv2.flip(array,1)
+#     m, s = divmod(timer, 60)  
+#     timeleft = '{:02d}:{:02d}'.format(m, s) 
+#     print(timeleft, end="\r")  
+#     time.sleep(1)  
+#     timer = timer-1 
+    
 # Start new Threads
 thread1.start()
 time.sleep(0.01)

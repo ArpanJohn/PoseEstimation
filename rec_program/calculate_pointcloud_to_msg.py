@@ -32,7 +32,7 @@ def save_frames(pointcloud, POINTfile):
     POINTfile.write(pc_packed)
 
 # Path to session folder
-pth = r"C:\Users\arpan\OneDrive\Documents\internship\rec_program\savdir\Session_26-06-23_15-12-16_2451"
+pth = r"C:\Users\arpan\OneDrive\Documents\internship\rec_program\savdir\Session_27-06-23_09-20-28_8231"
 
 # Getting the COLOR files
 targetPattern_colour = f"{pth}\\COLOUR*"
@@ -51,7 +51,6 @@ p = open(ppth[0], "rb")
 unpacker=None
 unpacker = list(msgp.Unpacker(p, object_hook=mpn.decode))
 timestamps = []
-f=0
 ps = []
 
 # Getting the parameters of the recording
@@ -70,9 +69,9 @@ modified_string = modified_string.strip()
 # splitting the string and assigning the parameters
 params = modified_string.split(' ')
 
-w = params[0]
-h = params[1]
-fps = params[-1]
+w = int(params[0])
+h = int(params[1])
+fps = int(params[-1])
 
 CX_DEPTH = float(params[3])
 CY_DEPTH = float(params[4])
@@ -119,7 +118,7 @@ for i in campth:
         c+=1
 
         # Saving frames to msgpack files
-        save_frames(pcd,POINTfile)
+        save_frames(pcd.reshape(height,width,3)/1000,POINTfile)
 
         # Counting frames in each msgpack
         counter = counter + 1
@@ -134,6 +133,15 @@ for i in campth:
 
 
 
+choice=input('delete the depth files? y/n')
 
+if choice == 'y':
+    for file_path in campth:
+        try:
+            # Delete the file
+            os.remove(file_path)
+            print("Deleted file:", file_path)
+        except OSError as e:
+            print("Error deleting file:", file_path, "-", e)
 
 
