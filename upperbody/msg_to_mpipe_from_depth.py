@@ -17,7 +17,7 @@ pth = r"C:\Users\arpan\OneDrive\Documents\internship\rec_program\savdir\Session_
 lst = os.listdir(pth)
 vid_name = lst[-1]
 
-targetPattern = f"{pth}\\POINT*"
+targetPattern = f"{pth}\\DEPTH*"
 campth = glob.glob(targetPattern)
 
 targetPattern_param = f"{pth}\\PARAM*"
@@ -52,6 +52,14 @@ params = modified_string.split(' ')
 w = int(params[0])
 h = int(params[1])
 fps = int(params[-1])
+
+height = int(h)
+width = int(w) 
+
+CX_DEPTH = float(params[3])
+CY_DEPTH = float(params[4])
+FX_DEPTH = float(params[6])
+FY_DEPTH = float(params[7])
 
 for unpacked in unpacker:
     timestamps.append(unpacked)
@@ -97,8 +105,17 @@ xyz=['_x','_y','_z']
 
 df['epoch_time']=pd.Series(timestamps)
 
+# compute indices:
+jj = np.tile(range(width), height)
+ii = np.repeat(range(height), width)
+# Compute constants:
+xx = (jj - CX_DEPTH) / FX_DEPTH
+yy = (ii - CY_DEPTH) / FY_DEPTH
+# transform depth image to vector of z:
+length = height * width
+
 for i,j in zip(cpth,campth):
-    print(i)
+    print(j)
     col_file = open(i, "rb")
     unpacker = None
     unpacker = msgp.Unpacker(col_file, object_hook=mpn.decode)
@@ -109,7 +126,11 @@ for i,j in zip(cpth,campth):
         c+=1
         imagep=unpacked
         
-        pointcloud=np.asanyarray(d_unpacked)
+        z = np.asanyarray(d_unpacked).reshape(height * width)
+        # compute point cloud
+        pcd = np.dstack((xx * z, yy * z, z)).reshape((length, 3))
+
+        pointcloud=(pcd.reshape(height,width,3)/1000)
 
         # Making predictions using holistic model
         # To improve performance, optionally mark the image as not writeable to
@@ -206,6 +227,7 @@ for i,j in zip(cpth,campth):
                 break
         except:
             continue
+    depth_file.close()
     col_file.close()
 
 cv2.destroyAllWindows()
@@ -476,4 +498,4 @@ for index,j in df.iterrows():
 
 print(df.head())
 
-df.to_csv(pth+'\mpipe1.csv',index=False)
+df.to_csv(pth+'\mpipe2.csv',index=False)

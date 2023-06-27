@@ -27,7 +27,7 @@ def createFile(SessDir, fileCounter):
     return POINTfile
 
 def save_frames(pointcloud, POINTfile):
-    # saving the depth information
+    # saving the pointcloud information
     pointcloud=pointcloud.astype(np.float16)
     pc_packed = msgp.packb(pointcloud, default=mpn.encode)
     POINTfile.write(pc_packed)
@@ -79,19 +79,26 @@ CY_DEPTH = float(params[4])
 FX_DEPTH = float(params[6])
 FY_DEPTH = float(params[7])
 
+# Getting the timestamps
 for unpacked in unpacker:
     timestamps.append(unpacked)
 
+# Finding recording duration
 rec_dur=timestamps[-1]-timestamps[0]
 
 # Print the parameters of the recording
 print(('recording duration '+f"{rec_dur:.3}"+' s'+'\nresolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
 print('number of frames:', len(timestamps))
 
-c=0
-
 height = int(h)
 width = int(w) 
+
+# Setting counters
+counter = 1
+fileCounter = 1
+
+# Creating necessary files
+POINTfile=createFile(pth,fileCounter)
 
 # compute indices:
 jj = np.tile(range(width), height)
@@ -102,13 +109,6 @@ yy = (ii - CY_DEPTH) / FY_DEPTH
 # transform depth image to vector of z:
 length = height * width
 
-# Setting counters
-counter = 1
-fileCounter = 1
-
-# Creating necessary files
-POINTfile=createFile(pth,fileCounter)
-
 for i in campth:
     depth_file = open(i, "rb")
     unpacker = None
@@ -117,7 +117,6 @@ for i in campth:
         z = np.asanyarray(unpacked).reshape(height * width)
         # compute point cloud
         pcd = np.dstack((xx * z, yy * z, z)).reshape((length, 3))
-        c+=1
 
         # Saving frames to msgpack files
         save_frames(pcd.reshape(height,width,3)/1000,POINTfile)
@@ -133,17 +132,15 @@ for i in campth:
             counter = 1   
     depth_file.close()
 
+# choice=input('delete the depth files? y/n')
 
-
-choice=input('delete the depth files? y/n')
-
-if choice == 'y':
-    for file_path in campth:
-        try:
-            # Delete the file
-            os.remove(file_path)
-            print("Deleted file:", file_path)
-        except OSError as e:
-            print("Error deleting file:", file_path, "-", e)
+# if choice == 'y':
+#     for file_path in campth:
+#         try:
+#             # Delete the file
+#             os.remove(file_path)
+#             print("Deleted file:", file_path)
+#         except OSError as e:
+#             print("Error deleting file:", file_path, "-", e)
 
 
