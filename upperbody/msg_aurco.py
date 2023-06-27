@@ -13,7 +13,7 @@ lst = os.listdir(pth)
 vid_name = lst[-1]
 
 # targetPattern = f"{pth}\\CAMSPACE*" 
-targetPattern = f"{pth}\\DEPTH*"
+targetPattern = f"{pth}\\POINT*"
 campth = glob.glob(targetPattern)
 
 targetPattern_param = f"{pth}\\PARAM*"

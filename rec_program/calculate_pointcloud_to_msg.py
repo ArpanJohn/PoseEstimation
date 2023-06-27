@@ -85,6 +85,7 @@ rec_dur=timestamps[-1]-timestamps[0]
 
 # Print the parameters of the recording
 print(('recording duration '+f"{rec_dur:.3}"+' s'+'\nresolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
+print('number of frames:', len(timestamps))
 
 c=0
 

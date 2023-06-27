@@ -328,6 +328,7 @@ rec_dur=timestamps[-1]-timestamps[0]
 
 # Print the parameters of the recording
 print(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
+print('number of frames:', len(timestamps))
 
 # Show the graph of time of arrival of each frame (should be linear)
 plt.plot(range(len(timestamps)),timestamps)

@@ -88,15 +88,29 @@ holistic_model = mp_holistic.Holistic(
     min_tracking_confidence=0.5
 )
 
-for i in cpth:
+# Dictionary containing landmark names and corresponding values with mediapipe landmark number
+land_marks = {'LS': [LS,11], 'LE': [LE,13], 'LW': [LW,15], 'RS': [RS,12], 'RE': [RE,14], 'RW': [RW,16], 'TR': [TR,0]}
+
+# pandas dataframe to hold landmark values
+df=pd.DataFrame()
+xyz=['_x','_y','_z']
+
+df['epoch_time']=pd.Series(timestamps)
+
+for i,j in zip(cpth,campth):
     print(i)
     col_file = open(i, "rb")
     unpacker = None
     unpacker = msgp.Unpacker(col_file, object_hook=mpn.decode)
-    for unpacked in unpacker:
+    depth_file = open(i, "rb")
+    d_unpacker = None
+    d_unpacker = msgp.Unpacker(depth_file, object_hook=mpn.decode)
+    for unpacked,d_unpacked in zip(unpacker,d_unpacker):
         c+=1
         imagep=unpacked
         
+        pointcloud=d_unpacked
+
         # Making predictions using holistic model
         # To improve performance, optionally mark the image as not writeable to
         # pass by reference.
@@ -132,53 +146,37 @@ for i in cpth:
             for mark, data_point in zip(mp_holistic.PoseLandmark, results.pose_landmarks.landmark):
                 dic[mark.value] = dict(landmark = mark.name, 
                     x = data_point.x,
-                    y = data_point.y)        
-            try:
-                LS.append([dic[11]['x']*w,dic[11]['y']*h])
-            except:
-                LS.append(np.nan)
-            try:
-                LE.append([dic[13]['x']*w,dic[13]['y']*h])
-            except:
-                LE.append(np.nan)
-            try:
-                LW.append([dic[15]['x']*w,dic[15]['y']*h])
-            except:
-                LW.append(np.nan)
-            try:
-                RS.append([dic[12]['x']*w,dic[12]['y']*h])
-            except:
-                RS.append(np.nan)
-            try:
-                RE.append([dic[14]['x']*w,dic[14]['y']*h])
-            except:
-                RE.append(np.nan)
-            try:
-                RW.append([dic[16]['x']*w,dic[16]['y']*h])
-            except:
-                RW.append(np.nan)
-            
-            try:
-                Smid=midpoint([dic[11]['x']*w,dic[11]['y']*h],[dic[12]['x']*w,dic[12]['y']*h])
-                perpx=int(Smid[0])
-                perpy=(int(Smid[1])+25)
+                    y = data_point.y)   
 
-                cv2.circle(color_image,(perpx,perpy) , 5, (0, 0, 255), 2)
-                TR.append([perpx,perpy])     #in uv format  
-            except:
-                TR.append(np.nan)
+            for key,value in land_marks.items():    
+                for j in range(3):  
+                    if value[1] !=0:     
+                        try:
+                            value[0].append(pointcloud[int(dic[value[1]]['x']*w)][int(dic[value[1]]['y']*h)])
+                        except:
+                            value[0].append(np.nan)
+                    else:
+                        try:
+                            Smid=midpoint([dic[11]['x']*w,dic[11]['y']*h],[dic[12]['x']*w,dic[12]['y']*h])
+                            perpx=int(Smid[0])
+                            perpy=(int(Smid[1])+25)
+
+                            cv2.circle(color_image,(perpx,perpy) , 5, (0, 0, 255), 2)
+                            TR.append([perpx,perpy])     #in uv format  
+                        except:
+                            TR.append(np.nan)
 
             try:
                 RI.append([dic[20]['x']*w,dic[20]['y']*h])
                 LI.append([dic[19]['x']*w,dic[19]['y']*h])
 
                 # Drawing the boxes around limbs for occlusion
-                draw_box(color_image,LS[c],LE[c])
-                draw_box(color_image,RS[c],RE[c])
-                draw_box(color_image,LE[c],LW[c])
-                draw_box(color_image,RE[c],RW[c])
-                draw_box(color_image,RW[c],([dic[20]['x']*w,dic[20]['y']*h]),(255,0,255),40)
-                draw_box(color_image,LW[c],([dic[19]['x']*w,dic[19]['y']*h]),(0,255,255),40) 
+                draw_box(color_image,[dic[11]['x']*w,dic[11]['y']*h],[dic[13]['x']*w,dic[13]['y']*h])
+                draw_box(color_image,[dic[12]['x']*w,dic[12]['y']*h],[dic[14]['x']*w,dic[14]['y']*h])
+                draw_box(color_image,[dic[13]['x']*w,dic[13]['y']*h],[dic[15]['x']*w,dic[15]['y']*h])
+                draw_box(color_image,[dic[14]['x']*w,dic[14]['y']*h],[dic[16]['x']*w,dic[16]['y']*h])
+                draw_box(color_image,[dic[16]['x']*w,dic[16]['y']*h],([dic[20]['x']*w,dic[20]['y']*h]),(255,0,255),40)
+                draw_box(color_image,[dic[15]['x']*w,dic[15]['y']*h],([dic[19]['x']*w,dic[19]['y']*h]),(0,255,255),40) 
             except:
                 RI.append(np.nan)
                 LI.append(np.nan)
@@ -223,7 +221,7 @@ for i in campth:
     unpacker = msgp.Unpacker(depth_file, object_hook=mpn.decode)
     for unpacked in unpacker:
          c+=1
-         unpacked=np.asanyarray(unpacked) 
+         unpacked=np.flip(unpacked,1) 
          pos.append(unpacked)
     depth_file.close()
 
@@ -231,14 +229,7 @@ cv2.destroyAllWindows()
 pos=np.array(pos)
 print(pos.shape)
 
-# Dictionary containing landmark names and corresponding values
-land_marks = {'LS': LS, 'LE': LE, 'LW': LW, 'RS': RS, 'RE': RE, 'RW': RW, 'TR': TR}
 
-# pandas dataframe to hold landmark values
-df=pd.DataFrame()
-xyz=['_x','_y','_z']
-
-df['epoch_time']=pd.Series(timestamps)
 
 for key,value in land_marks.items():    
     for j in range(3):
@@ -253,6 +244,7 @@ for key,value in land_marks.items():
 
 # take the stuff out of memory
 pos = None
+
 # Finding and correcting occlusions based on boxes
 startflag = 0  # Flag to track the starting frame of occlusion
 before_occ = 0  # Frame before occlusion
