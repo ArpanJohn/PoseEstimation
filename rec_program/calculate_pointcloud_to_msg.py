@@ -33,7 +33,7 @@ def save_frames(pointcloud, POINTfile):
     POINTfile.write(pc_packed)
 
 # Path to session folder
-pth = r"C:\Users\arpan\OneDrive\Documents\internship\rec_program\savdir\Session_27-06-23_11-29-04_3971"
+pth = r"C:\Users\arpan\OneDrive\Documents\internship\rec_program\savdir\d"
 
 # Getting the COLOR files
 targetPattern_colour = f"{pth}\\COLOUR*"

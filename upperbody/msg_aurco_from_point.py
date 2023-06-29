@@ -7,13 +7,13 @@ import glob
 import os
 import matplotlib.pyplot as plt
 
-pth = r"C:\Users\arpan\OneDrive\Documents\internship\rec_program\dummy_rec\gpane"
+pth = r"C:\Users\arpan\OneDrive\Documents\internship\rec_program\savdir\p"
 
 lst = os.listdir(pth)
 vid_name = lst[-1]
 
-# targetPattern = f"{pth}\\CAMSPACE*" 
-targetPattern = f"{pth}\\POINT*"
+targetPattern = f"{pth}\\POINT*" 
+# targetPattern = f"{pth}\\DEPTH*"
 campth = glob.glob(targetPattern)
 
 targetPattern_param = f"{pth}\\PARAM*"
@@ -25,7 +25,7 @@ cpth = glob.glob(targetPattern_colour)
 img = []
 c=0
 for i in cpth:
-    print(i)
+    # print(i)
     col_file = open(i, "rb")
     unpacker = None
     unpacker = msgp.Unpacker(col_file, object_hook=mpn.decode)
@@ -49,7 +49,7 @@ cv2.destroyAllWindows()
 pos = []
 c=0
 for i in campth:
-    print(i)
+    # print(i)
     depth_file = open(i, "rb")
     unpacker = None
     unpacker = msgp.Unpacker(depth_file, object_hook=mpn.decode)
@@ -105,13 +105,27 @@ for corner in corners:
         cv2.circle(image, (x, y), 50, (0, 255, 0), 2)
 
 # Show the result
-cv2.imshow("Result", image)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+# cv2.imshow("Result", image)
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
+
+# cento=pos[aurco_flag][centers[2][1]][centers[2][0]][1]
+# centz=pos[aurco_flag][centers[0][1]][centers[0][0]][1]
+# centx=pos[aurco_flag][centers[1][1]][centers[1][0]][1]
+
+# print(cento)
+# print(centx)
+# print(centz)
+# quit()
 
 cento=pos[aurco_flag][centers[2][1],centers[2][0]]
 centz=pos[aurco_flag][centers[0][1],centers[0][0]]
 centx=pos[aurco_flag][centers[1][1],centers[1][0]]
+
+print(np.linalg.norm(cento-centz)*100)
+print(np.linalg.norm(cento-centx)*100)
+print(np.linalg.norm(centz-centx)*100)
+
 
 # Assigning centers to origin, x axis and z axis
 for i in range(3):
@@ -122,7 +136,7 @@ for i in range(3):
                 centz=pos[aurco_flag][centers[i][1],centers[i][0]]
                 centx=pos[aurco_flag][centers[3-j-i][1],centers[3-j-i][0]]
                 print('Centers assigned')
-
+quit()
 #verifiying centers
 org_z=np.add(centz,-cento)*100
 org_x=np.add(cento,-centx)*100

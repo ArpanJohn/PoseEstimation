@@ -14,6 +14,7 @@ import threading
 from queue import Queue
 import glob
 import matplotlib.pyplot as plt
+import multiprocessing as mp
 
 # getting Date and time
 now = datetime.now()
@@ -23,8 +24,9 @@ today = date.today()
 SessDir=[]
 stop = Queue()
 
-class rec(threading.Thread):
-    def __init__(self, threadID, name, counter):
+class rec():
+    def __init__(self, processID, name, counter):
+        print('hi')
         stop.put(False)
         # Setting the parameters of the stream
         self.h=480
@@ -32,19 +34,23 @@ class rec(threading.Thread):
         self.fps=30
         self.windowscale=1
 
-        # Getting threadID
+        # Getting processID
         threading.Thread.__init__(self)
-        self.threadID=threadID
+        self.processID=processID
         self.f=0
+        self.name=name
+        rec.run(self)
 
     def run(self):
-        # running the first thread for recording 
+        # running the first process for recording 
         print ("Starting " + self.name)
-        if self.threadID == 1:
+        print(self.processID)
+        if self.processID == 1:
+            print('sup')
             self.readframe()
 
-        # running the the second thread for calculating pointcloud and saving
-        if self.threadID == 2:
+        # running the the second process for calculating pointcloud and saving
+        if self.processID == 2:
 
             # saving resolution as a list to add to parameters file
             self.xy = [self.w,self.h]
@@ -257,68 +263,68 @@ class rec(threading.Thread):
             pipeline.stop()
             cv2.destroyAllWindows()
 
-threadLock = threading.Lock()
-threads=[]
 
-# Initializing the queues
-color_image_queue, depth_frame_queue=Queue(),Queue()
-param_queue=Queue()
-        
-# Create new threads
-thread1 = rec(1, "Thread-1", 1)
-thread2 = rec(2, "Thread-2", 2)
+from multiprocessing import Process, freeze_support
 
-# Start new Threads
-thread1.start()
-time.sleep(0.01)
-thread2.start()
+if __name__ == '__main__':
+    freeze_support()
+    # Initializing the queues
+    color_image_queue, depth_frame_queue=Queue(),Queue()
+    param_queue=Queue()
+            
+    pr1 = rec(1,'process1','1')
+    pr2 = rec(2,'process2','2')
 
-# Add threads to thread list
-threads.append(thread1)
-threads.append(thread2)
+    # Create two process objects
+    p1 = mp.Process()
+    p2 = mp.Process()
 
-# Wait for all threads to complete
-for t in threads:
-    t.join()
+    # Start the processes
+    p1.start()
+    p2.start()
 
-# Path to session folder
-pth = SessDir[0]
+    # Wait for both processes to complete
+    p1.join()
+    p2.join()
 
-# Getting the parameter file
-targetPattern_param = f"{pth}\\PARAM*"
-ppth = glob.glob(targetPattern_param)
+    # Path to session folder
+    pth = SessDir[0]
 
-#obtaining parameters and list time_stamps
-p = open(ppth[0], "rb")
-unpacker=None
-unpacker = msgp.Unpacker(p, object_hook=mpn.decode)
-prm = []
-f=0
-ps = []
-print('unpacking param file')
-for unpacked in unpacker:
-    f+=1
-    if f<3:
-        ps.append(unpacked)
-        continue
-    prm.append(unpacked)
-timestamps=prm
+    # Getting the parameter file
+    targetPattern_param = f"{pth}\\PARAM*"
+    ppth = glob.glob(targetPattern_param)
 
-# Getting the parameters of the recording
-w=ps[0][0]
-h=ps[0][1]
-fps=ps[-1]
-rec_dur=timestamps[-1]-timestamps[0]
+    #obtaining parameters and list time_stamps
+    p = open(ppth[0], "rb")
+    unpacker=None
+    unpacker = msgp.Unpacker(p, object_hook=mpn.decode)
+    prm = []
+    f=0
+    ps = []
+    print('unpacking param file')
+    for unpacked in unpacker:
+        f+=1
+        if f<3:
+            ps.append(unpacked)
+            continue
+        prm.append(unpacked)
+    timestamps=prm
+
+    # Getting the parameters of the recording
+    w=ps[0][0]
+    h=ps[0][1]
+    fps=ps[-1]
+    rec_dur=timestamps[-1]-timestamps[0]
 
 
-# Print the parameters of the recording
-print(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
+    # Print the parameters of the recording
+    print(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
 
-# Show the graph of time of arrival of each frame (should be linear)
-plt.plot(range(len(timestamps)),timestamps)
-plt.title(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
-# plt.legend(['d','c'])
-plt.xlabel('frame')
-plt.ylabel('epoch time in seconds')
-plt.savefig(pth+'/time_graph.jpg')
-plt.show()
+    # Show the graph of time of arrival of each frame (should be linear)
+    plt.plot(range(len(timestamps)),timestamps)
+    plt.title(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
+    # plt.legend(['d','c'])
+    plt.xlabel('frame')
+    plt.ylabel('epoch time in seconds')
+    plt.savefig(pth+'/time_graph.jpg')
+    plt.show()

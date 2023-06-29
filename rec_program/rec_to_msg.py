@@ -28,8 +28,8 @@ class rec(threading.Thread):
     def __init__(self, threadID, name, counter):
         stop.put(False)
         # Setting the parameters of the stream
-        self.h=720
-        self.w=1280
+        self.h=480
+        self.w=640
         self.fps=30
         self.windowscale=1
 
