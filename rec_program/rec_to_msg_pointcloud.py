@@ -67,6 +67,8 @@ class rec(threading.Thread):
 
                 # Get color image and depth frame from queue to calculate pointcloud and save to files     
                 while not color_image_queue.empty():
+                    # print number of items in queue
+                    print('Queue size : ', color_image_queue.qsize(), end = '\r')
                     # Getting the frames from queue
                     color_image=color_image_queue.get()
                     depth_frame=depth_frame_queue.get()

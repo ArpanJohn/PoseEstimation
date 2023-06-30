@@ -10,24 +10,17 @@ import time
 from support.funcs import *
 from datetime import date, datetime
 from numpy import random
-import threading
-from queue import Queue
 import glob
 import matplotlib.pyplot as plt
-import multiprocessing as mp
+from multiprocessing import freeze_support , Process, Manager
+from queue import Queue
 
 # getting Date and time
 now = datetime.now()
 today = date.today()
 
-# initializing things
-SessDir=[]
-stop = Queue()
-
 class rec():
-    def __init__(self, processID, name, counter):
-        print('hi')
-        stop.put(False)
+    def __init__(self, processID, name):
         # Setting the parameters of the stream
         self.h=480
         self.w=640
@@ -35,47 +28,51 @@ class rec():
         self.windowscale=1
 
         # Getting processID
-        threading.Thread.__init__(self)
         self.processID=processID
         self.f=0
         self.name=name
-        rec.run(self)
-
-    def run(self):
+        self.depth_frame_list=[]
+   
+    def process_1(self):
         # running the first process for recording 
-        print ("Starting " + self.name)
-        print(self.processID)
-        if self.processID == 1:
-            print('sup')
-            self.readframe()
+        print ("Starting p1")
+        self.readframe()
 
+    def process_2(self):
+        self.stop.put(False)
         # running the the second process for calculating pointcloud and saving
-        if self.processID == 2:
-
-            # saving resolution as a list to add to parameters file
-            self.xy = [self.w,self.h]
-            
-            # Setting counters
-            self.counter = 1
-            self.fileCounter = 1
-
-            # Creating necessary files
-            self.createFile(self.fileCounter)
-
-            # Saving stream parameters to parameters file
-            parameters=param_queue.get()
-            p_packed = msgp.packb(str(parameters)+str(self.fps))
-            self.paramFile.write(p_packed)
+        print("Starting p2")
+        # saving resolution as a list to add to parameters file
+        self.xy = [self.w,self.h]
         
-            while not stop.get():
-                # Initializing the point cloud object
-                pc = rs.pointcloud()
+        # Setting counters
+        self.counter = 1
+        self.fileCounter = 1
 
-                # Get color image and depth frame from queue to calculate pointcloud and save to files     
-                while not color_image_queue.empty():
-                    # Getting the frames from queue
-                    color_image=color_image_queue.get()
-                    depth_frame=depth_frame_queue.get()
+        # Creating necessary files
+        self.createFile(self.fileCounter)
+
+        # Saving stream parameters to parameters file
+        if self.param_queue.qsize() == 0:
+            self.param_queue.put(101)
+        parameters=self.param_queue.get()
+
+        p_packed = msgp.packb(str(parameters)+str(self.fps))
+        self.paramFile.write(p_packed)
+    
+        while not self.stop.get():
+            # Initializing the point cloud object
+            pc = rs.pointcloud()
+
+            # Get color image and depth frame from queue to calculate pointcloud and save to files     
+            while not self.color_image_queue.empty():
+                # print number of items in queue
+                print('Queue size p2 : ', self.color_image_queue.qsize())
+                # Getting the frames from queue
+                color_image=self.color_image_queue.get()
+                print('in p2',len(self.depth_frame_list))
+                try:
+                    depth_frame=self.depth_frame_list.pop(0)
 
                     # getting the time stamp of the depth frame
                     timestamp=(rs.frame.get_frame_metadata(depth_frame,rs.frame_metadata_value.time_of_arrival))
@@ -104,11 +101,82 @@ class rec():
                         self.depthfile.close()
                         self.createFile(self.fileCounter)
                         self.counter = 1   
+                except:
+                    pass
 
-            # saving the directory for saving the time graph
-            SessDir.append(self.sessionDir)
-            self.paramFile.close()
+        # saving the directory for saving the time graph
+        self.paramFile.close()
         print ("Exiting " + self.name)
+
+    def run(self):
+
+        with Manager() as man:
+            # Initializing the queues
+            self.color_image_queue = man.Queue()
+            # depth_frame_queue=Queue()
+            self.param_queue=man.Queue()
+            self.stop = man.Queue()  
+            self.SessDir=man.Queue()
+            # Create two process objects
+            processes = []
+            p1 = Process(target=self.process_1)
+            p2 = Process(target=self.process_2)
+
+            
+
+            # starting them
+            p1.start()
+            time.sleep(1)
+            p2.start()
+
+
+            # appending them
+            processes.append(p1)
+            processes.append(p2)
+
+            for p in processes:
+                p.join()    
+
+            pth = self.SessDir.get()
+
+            # Getting the parameter file
+            targetPattern_param = f"{pth}\\PARAM*"
+            ppth = glob.glob(targetPattern_param)
+
+            #obtaining parameters and list time_stamps
+            p = open(ppth[0], "rb")
+            unpacker=None
+            unpacker = msgp.Unpacker(p, object_hook=mpn.decode)
+            prm = []
+            f=0
+            ps = []
+            print('unpacking param file')
+            for unpacked in unpacker:
+                f+=1
+                if f<3:
+                    ps.append(unpacked)
+                    continue
+                prm.append(unpacked)
+            timestamps=prm
+
+            # Getting the parameters of the recording
+            w=ps[0][0]
+            h=ps[0][1]
+            fps=ps[-1]
+            rec_dur=timestamps[-1]-timestamps[0]
+
+
+            # Print the parameters of the recording
+            print(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
+
+            # Show the graph of time of arrival of each frame (should be linear)
+            plt.plot(range(len(timestamps)),timestamps)
+            plt.title(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
+            # plt.legend(['d','c'])
+            plt.xlabel('frame')
+            plt.ylabel('epoch time in seconds')
+            plt.savefig(pth+'/time_graph.jpg')
+            plt.show()
 
     def createFile(self, fileCounter):
 
@@ -141,10 +209,11 @@ class rec():
             self.rnd) + "_" + str(fileCounter) + ".msgpack"
         self.colourfilename = self.sessionDir + "/" + "COLOUR" + "_" + self.tm + "_" + str(
             self.rnd) + "_" + str(fileCounter) + ".msgpack"
-        
+
         # Opening depth and colour file for writing
         self.depthfile = open(self.depthfilename, 'wb')
         self.colourfile = open(self.colourfilename, 'wb')
+        self.SessDir.put(self.sessionDir)
 
         print(f"creating files {fileCounter}")
 
@@ -198,7 +267,7 @@ class rec():
             profile1d=profiled.as_video_stream_profile() 
             intr = profile1d.get_intrinsics()   
             intr=str(intr) 
-            param_queue.put('depth intrinsics:'+intr) 
+            self.param_queue.put('depth intrinsics:'+intr) 
 
             # initializing alignment
             align_to = rs.stream.color
@@ -232,19 +301,24 @@ class rec():
                 # Convert images to numpy arrays
                 color_image = np.asanyarray(color_frame.get_data()) 
 
-                # Signal that thread1 is running
-                stop.put(False)
+                # Signal that process1 is running
+                self.stop.put(False)
 
                 # limit size of queues to 10
-                while color_image_queue.qsize()>10:
-                    bin=color_image_queue.get()
-                    bin=depth_frame_queue.get()
-                    bin=param_queue.get()
+                while self.color_image_queue.qsize()>10 or len(self.depth_frame_list)>10:
+                    # print('binning queue' , end = '\r')
+                    # print(type(color_image_queue.get()))
+                    bin=self.color_image_queue.get()
+                    bin=self.depth_frame_list.pop(0)
+                    # bin=param_queue.get()
                     bin=None
 
+                # print number of items in queue
+                # print('Queue size p1 : ', color_image_queue.qsize(), end = '\r')
                 # putting the images in the queues
-                color_image_queue.put(color_image)
-                depth_frame_queue.put(aligned_depth_frame)
+                self.color_image_queue.put(color_image)
+                self.depth_frame_list.append(aligned_depth_frame)
+                print('in p1',len(self.depth_frame_list))
 
                 # resizing for display
                 color_image=cv2.resize(color_image, (int(self.w*self.windowscale),int(self.h*self.windowscale)))
@@ -253,7 +327,7 @@ class rec():
                 cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
                 cv2.imshow('RealSense', color_image)
                 if cv2.waitKey(5) & 0xFF == ord('q'):
-                    stop.put(True)
+                    self.stop.put(True)
                     break
                 c+=1
                 
@@ -263,68 +337,7 @@ class rec():
             pipeline.stop()
             cv2.destroyAllWindows()
 
-
-from multiprocessing import Process, freeze_support
-
 if __name__ == '__main__':
     freeze_support()
-    # Initializing the queues
-    color_image_queue, depth_frame_queue=Queue(),Queue()
-    param_queue=Queue()
-            
-    pr1 = rec(1,'process1','1')
-    pr2 = rec(2,'process2','2')
-
-    # Create two process objects
-    p1 = mp.Process()
-    p2 = mp.Process()
-
-    # Start the processes
-    p1.start()
-    p2.start()
-
-    # Wait for both processes to complete
-    p1.join()
-    p2.join()
-
-    # Path to session folder
-    pth = SessDir[0]
-
-    # Getting the parameter file
-    targetPattern_param = f"{pth}\\PARAM*"
-    ppth = glob.glob(targetPattern_param)
-
-    #obtaining parameters and list time_stamps
-    p = open(ppth[0], "rb")
-    unpacker=None
-    unpacker = msgp.Unpacker(p, object_hook=mpn.decode)
-    prm = []
-    f=0
-    ps = []
-    print('unpacking param file')
-    for unpacked in unpacker:
-        f+=1
-        if f<3:
-            ps.append(unpacked)
-            continue
-        prm.append(unpacked)
-    timestamps=prm
-
-    # Getting the parameters of the recording
-    w=ps[0][0]
-    h=ps[0][1]
-    fps=ps[-1]
-    rec_dur=timestamps[-1]-timestamps[0]
-
-
-    # Print the parameters of the recording
-    print(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
-
-    # Show the graph of time of arrival of each frame (should be linear)
-    plt.plot(range(len(timestamps)),timestamps)
-    plt.title(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
-    # plt.legend(['d','c'])
-    plt.xlabel('frame')
-    plt.ylabel('epoch time in seconds')
-    plt.savefig(pth+'/time_graph.jpg')
-    plt.show()
+    Rec = rec(1,'process 1')
+    Rec.run()   
