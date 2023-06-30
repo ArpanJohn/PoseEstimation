@@ -17,21 +17,22 @@ import matplotlib.pyplot as plt
 import re
 import json
 
+import keyboard
+
 # getting Date and time
 now = datetime.now()
 today = date.today()
 
 # initializing things
 SessDir=[]
-stop = Queue()
 
 class recorder():
     def __init__(self):
-        stop.put(False)
-
         # Setting the parameters of the stream
         self.h = 720  # 480
+        # self.h = 480  # 480
         self.w = 1280 # 640
+        # self.w = 640 # 640
         self.fps=30
         self.f=0
 
@@ -51,6 +52,9 @@ class recorder():
         self.pipeline_profile = self.config.resolve(self.pipeline_wrapper)
         self.device = self.pipeline_profile.get_device()
         self.device_product_line = str(self.device.get_info(rs.camera_info.product_line))
+
+        self.pc = rs.pointcloud()
+
 
     def run(self):
         t1 = threading.Thread(target=self.readframe)
@@ -74,8 +78,7 @@ class recorder():
         parameters=self.stream_parm_list.pop(0)
         p_packed = msgp.packb(str(parameters)+str(self.fps))
         self.paramFile.write(p_packed)
-    
-        pc = rs.pointcloud()
+
 
         while not self.stop_flag:
             if not len(self.color_image_list) == 0 and not len(self.depth_frame_list) == 0 and not len(self.stream_parm_list) == 0:
@@ -89,7 +92,7 @@ class recorder():
 
                 # Calculating the pointcloud
                 try:
-                    points = pc.calculate(depth_frame)
+                    points = self.pc.calculate(depth_frame)
                     v = points.get_vertices()
                     verts = np.asanyarray(v).view(np.float32)
                     xyzpos=verts.reshape(self.h,self.w, 3)  # xyz
@@ -112,6 +115,7 @@ class recorder():
                     self.createFile(self.fileCounter)
                     self.counter = 1   
 
+
         # saving the directory for saving the time graph
         SessDir.append(self.sessionDir)
         self.paramFile.close()
@@ -129,8 +133,8 @@ class recorder():
             data = json.load(json_file)
             # Access the directory path
             pth = data['directory_path']
-        self.savingDir = pth + '\\savdir'
-        self.temp_dir = pth + '\\temp_dir'
+        self.savingDir = pth 
+        self.temp_dir = pth
         self.f=self.f+1
 
         # creating the files
@@ -203,15 +207,15 @@ class recorder():
                     
                 #End loop once video finishes
                 if not frame_present:
-                    break
+                    continue
 
                 # Wait for a coherent pair of frames: depth and color
-                frames = self.pipeline.wait_for_frames()
+                # frames = self.pipeline.wait_for_frames()
 
                 # Aligning the depth and color frames
-                aligned_frames = align.process(frames)
-                depth_frame = frames.get_depth_frame()
-                color_frame = frames.get_color_frame()
+                aligned_frames = align.process(frameset)
+                depth_frame = frameset.get_depth_frame()
+                color_frame = frameset.get_color_frame()
                 if not depth_frame or not color_frame:
                     continue                                
 
@@ -224,10 +228,9 @@ class recorder():
 
                 # limit size of queues to 10
                 while len(self.color_image_list)>10:
-                    bin = self.color_image_list.pop(0)
-                    bin = self.depth_frame_list.pop(0)
-                    bin = self.stream_parm_list.pop(0)      
-                    bin = None 
+                    self.color_image_list.pop(0)
+                    self.depth_frame_list.pop(0)
+                    self.stream_parm_list.pop(0)      
                     print('binned')
 
                 # putting the items in the lists for processing and saving
@@ -252,7 +255,7 @@ if __name__ == '__main__':
     thread = recorder()
     thread.run()  
 
-# Path to session folder
+# # Path to session folder
 pth = SessDir[0]
 
 # Getting the parameter file
