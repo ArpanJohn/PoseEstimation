@@ -23,19 +23,38 @@ today = date.today()
 SessDir=[]
 stop = Queue()
 
-class rec(threading.Thread):
-    def __init__(self, threadID, name, counter):
-        stop.put(False)
+class recorder():
+    def __init__(self):
+        super(recorder, self).__init__()
+
         # Setting the parameters of the stream
         self.h=720 # 480
         self.w=1280 # 640
         self.fps=30
         self.windowscale=1
 
-        # Getting threadID
-        threading.Thread.__init__(self)
-        self.threadID=threadID
-        self.f=0
+        # initializing base parameters
+        self.pipeline = rs.pipeline()
+        self.config = rs.config()
+
+        # Get device product line for setting a supporting resolution
+        self.pipeline_wrapper = rs.pipeline_wrapper(self.pipeline)
+        self.pipeline_profile = self.config.resolve(self.pipeline_wrapper)
+        self.device = self.pipeline_profile.get_device()
+        self.device_product_line = str(self.device.get_info(rs.camera_info.product_line))
+
+    def read(self):
+
+        found_rgb = False
+        for s in self.device.sensors:
+            if s.get_info(rs.camera_info.name) == 'RGB Camera':
+                found_rgb = True
+                break
+        if not found_rgb:
+            print("The demo requires Depth camera with Color sensor")
+            exit(0)
+
+
 
     def run(self):
         # running the first thread for recording 
@@ -87,7 +106,7 @@ class rec(threading.Thread):
                         print('error in pointcloud calculation')
 
                     # Saving frames to msgpack files
-                    rec.save_frames(color_image, xyzpos, timestamp, 
+                    self.save_frames(color_image, xyzpos, timestamp, 
                                     self.colourfile, self.depthfile, self.paramFile)
                     
                     # Counting frames in each msgpack
