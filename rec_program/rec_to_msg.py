@@ -25,18 +25,24 @@ SessDir=[]
 stop = Queue()
 
 class rec(threading.Thread):
-    def __init__(self, threadID, name, counter):
+    def __init__(self):
         stop.put(False)
+
         # Setting the parameters of the stream
         self.h=480
         self.w=640
         self.fps=30
-        self.windowscale=1
-
-        # Getting threadID
-        threading.Thread.__init__(self)
-        self.threadID=threadID
         self.f=0
+
+        # initializing base parameters
+        self.pipeline = rs.pipeline()
+        self.config = rs.config()
+
+        # Get device product line for setting a supporting resolution
+        self.pipeline_wrapper = rs.pipeline_wrapper(self.pipeline)
+        self.pipeline_profile = self.config.resolve(self.pipeline_wrapper)
+        self.device = self.pipeline_profile.get_device()
+        self.device_product_line = str(self.device.get_info(rs.camera_info.product_line))
 
     def run(self):
         # running the first thread for recording 
@@ -145,34 +151,13 @@ class rec(threading.Thread):
         paramsfile.write(p_packed)
 
     def readframe(self):
-        # Configure depth and color streams
-        pipeline = rs.pipeline()
-        config = rs.config()
-
-        # Get device product line for setting a supporting resolution
-        pipeline_wrapper = rs.pipeline_wrapper(pipeline)
-        pipeline_profile = config.resolve(pipeline_wrapper)
-        device = pipeline_profile.get_device()
-        device_product_line = str(device.get_info(rs.camera_info.product_line))
-
-        # Checking if there is an RGB camera
-        found_rgb = False
-        for s in device.sensors:
-            if s.get_info(rs.camera_info.name) == 'RGB Camera':
-                found_rgb = True
-                break
-        if not found_rgb:
-            print("The demo requires Depth camera with Color sensor")
-            exit(0)
-
         # Starting the stream for depth/color cameras
-        config.enable_stream(rs.stream.color, self.w, self.h, rs.format.bgr8, self.fps)
-
-        config.enable_stream(rs.stream.depth, self.w, self.h, rs.format.z16, self.fps)
+        self.config.enable_stream(rs.stream.color, self.w, self.h, rs.format.bgr8, self.fps)
+        self.config.enable_stream(rs.stream.depth, self.w, self.h, rs.format.z16, self.fps)
 
         try:
             # Start streaming from file
-            profile=pipeline.start(config)   
+            profile=self.pipeline.start(self.config)   
 
             # Getting depth intrinsics
             profiled = profile.get_stream(rs.stream.depth)
@@ -190,14 +175,14 @@ class rec(threading.Thread):
             
             while True:
                 # Checking if there are more frames
-                frame_present, frameset = pipeline.try_wait_for_frames()
+                frame_present, frameset = self.pipeline.try_wait_for_frames()
                     
                 #End loop once video finishes
                 if not frame_present:
                     break
 
                 # Wait for a coherent pair of frames: depth and color
-                frames = pipeline.wait_for_frames()
+                frames = self.pipeline.wait_for_frames()
 
                 # Aligning the depth and color frames
                 aligned_frames = align.process(frames)
@@ -244,7 +229,7 @@ class rec(threading.Thread):
         finally:
 
             # Stop streaming
-            pipeline.stop()
+            self.pipeline.stop()
             cv2.destroyAllWindows()
 
 threadLock = threading.Lock()

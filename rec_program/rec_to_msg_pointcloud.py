@@ -27,8 +27,8 @@ class rec(threading.Thread):
     def __init__(self, threadID, name, counter):
         stop.put(False)
         # Setting the parameters of the stream
-        self.h=720 # 480
-        self.w=1280 # 640
+        self.h= 480 # 720
+        self.w= 640 # 1280
         self.fps=30
         self.windowscale=1
 
@@ -237,10 +237,6 @@ class rec(threading.Thread):
                     bin=depth_frame_queue.get()
                     bin=param_queue.get()
                     bin=None
-                    bincount+=1
-
-                print('Queue size : ', color_image_queue.qsize())
-                print(f"bincount : {bincount}")
 
                 # putting the images in the queues
                 color_image_queue.put(color_image)
