@@ -16,6 +16,7 @@ import glob
 import matplotlib.pyplot as plt
 import re
 import json
+
 import keyboard
 
 # getting Date and time
@@ -36,8 +37,8 @@ class recorder():
         self.f=0
 
         # Initializing lists of color, depth, and parameters
-        self.color_frame_q=rs.frame_queue(75,keep_frames=True)
-        self.depth_frame_q=rs.frame_queue(75,keep_frames=True)
+        self.color_image_list=[]
+        self.depth_frame_list=[]
         self.stream_parm_list=[]
 
         # Stop flag
@@ -53,6 +54,7 @@ class recorder():
         self.device_product_line = str(self.device.get_info(rs.camera_info.product_line))
 
         self.pc = rs.pointcloud()
+
 
     def run(self):
         t1 = threading.Thread(target=self.readframe)
@@ -71,47 +73,51 @@ class recorder():
 
         # Creating necessary files
         self.createFile(self.fileCounter)
-        SessDir.append(self.sessionDir)
 
         # Saving stream parameters to parameters file
         parameters=self.stream_parm_list.pop(0)
         p_packed = msgp.packb(str(parameters)+str(self.fps))
         self.paramFile.write(p_packed)
 
-        while True :
-            frame_flag1 ,color_frame = self.color_frame_q.try_wait_for_frame()
-            frame_flag2 ,depth_frame = self.depth_frame_q.try_wait_for_frame()
 
-            if not (frame_flag1 and frame_flag2):
-                break
+        while not self.stop_flag:
+            if not len(self.color_image_list) == 0 and not len(self.depth_frame_list) == 0 and not len(self.stream_parm_list) == 0:
+                # print number of items in queue
+                # print('Queue size : ', color_image_queue.qsize(), end = '\r')
 
-            color_image = np.asanyarray(color_frame.get_data()) 
-            d_timestamp=(rs.frame.get_frame_metadata(depth_frame,rs.frame_metadata_value.time_of_arrival))
-            # Calculating the pointcloud
-            try:
-                points = self.pc.calculate(depth_frame)
-                v = points.get_vertices()
-                verts = np.asanyarray(v).view(np.float32)
-                xyzpos=verts.reshape(self.h,self.w, 3)  # xyz
-                point_image=xyzpos.astype(np.float16)            
-            except:
-                print('error in pointcloud calculation')
+                # Getting the frames from lists
+                color_image=self.color_image_list.pop(0)
+                depth_frame=self.depth_frame_list.pop(0)
+                d_timestamp=self.stream_parm_list.pop(0)
 
-            # Saving frames to msgpack files
-            self.save_frames(color_image, point_image, d_timestamp, self.colourfile, self.depthfile, self.paramFile)
-            
-            # Counting frames in each msgpack
-            self.counter = self.counter + 1
+                # Calculating the pointcloud
+                try:
+                    points = self.pc.calculate(depth_frame)
+                    v = points.get_vertices()
+                    verts = np.asanyarray(v).view(np.float32)
+                    xyzpos=verts.reshape(self.h,self.w, 3)  # xyz
+                    point_image=xyzpos.astype(np.float16)            
+                except:
+                    print('error in pointcloud calculation')
 
-            # When 90 frames in one .msgpack file, open a new file
-            if self.counter == 90:
-                self.fileCounter = self.fileCounter + 1
-                self.colourfile.close()
-                self.depthfile.close()
-                self.createFile(self.fileCounter)
-                self.counter = 1 
- 
+
+                # Saving frames to msgpack files
+                self.save_frames(color_image, point_image, d_timestamp, self.colourfile, self.depthfile, self.paramFile)
+                
+                # Counting frames in each msgpack
+                self.counter = self.counter + 1
+
+                # When 90 frames in one .msgpack file, open a new file
+                if self.counter == 90:
+                    self.fileCounter = self.fileCounter + 1
+                    self.colourfile.close()
+                    self.depthfile.close()
+                    self.createFile(self.fileCounter)
+                    self.counter = 1   
+
+
         # saving the directory for saving the time graph
+        SessDir.append(self.sessionDir)
         self.paramFile.close()
 
     def createFile(self, fileCounter):
@@ -134,7 +140,7 @@ class recorder():
         # creating the files
         if fileCounter == 1:
             self.rnd = random.randint(999)
-            self.sessionName = "Session_rsq_" + self.tm1 + "_" + self.tm2 + "_" + str(self.rnd)+str(self.f)
+            self.sessionName = "Session_lst_" + self.tm1 + "_" + self.tm2 + "_" + str(self.rnd)+str(self.f)
             self.sessionDir = os.path.join(self.savingDir, self.sessionName)
             self.temp_save = os.path.join(self.temp_dir, self.sessionName)
             os.mkdir(self.sessionDir)
@@ -156,6 +162,7 @@ class recorder():
         self.colourfile = open(self.colourfilename, 'wb')
 
         print(f"creating files {fileCounter}")
+
             
     def save_frames(self,colorImg, depthImg, milliseconds, colorFile, depthFile, paramsfile):
         # saving the depth information
@@ -193,7 +200,7 @@ class recorder():
 
             # Number of frames 
             c=0
-            
+
             start_time = time.time()
             while time.time() - start_time < 200:
                 # Checking if there are more frames
@@ -220,20 +227,27 @@ class recorder():
                 # Convert images to numpy arrays
                 color_image = np.asanyarray(color_frame.get_data()) 
 
+                # limit size of queues to 10
+                while len(self.color_image_list)>10:
+                    self.color_image_list.pop(0)
+                    self.depth_frame_list.pop(0)
+                    self.stream_parm_list.pop(0)      
+                    print('binned')
+
                 # putting the items in the lists for processing and saving
-                self.color_frame_q.enqueue(color_frame)
-                self.depth_frame_q.enqueue(aligned_depth_frame)
-                # self.stream_parm_list.append(rs.frame.get_frame_metadata(depth_frame,rs.frame_metadata_value.time_of_arrival))
+                self.color_image_list.append(color_image)
+                self.depth_frame_list.append(aligned_depth_frame)
+                self.stream_parm_list.append(rs.frame.get_frame_metadata(depth_frame,rs.frame_metadata_value.time_of_arrival))
                     
                 # Show images
                 cv2.imshow('RealSense', color_image)
                 if cv2.waitKey(5) & 0xFF == ord('q'):
+                    self.stop_flag = True
                     break
                 c+=1
                 
         finally:
             # Stop streaming
-            self.stop_flag = True
             self.pipeline.stop()
             cv2.destroyAllWindows()
     

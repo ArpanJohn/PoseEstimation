@@ -6,14 +6,19 @@ import msgpack_numpy as mpn
 import glob
 import os
 import matplotlib.pyplot as plt
+import json
 
-pth = r"C:\Users\arpan\OneDrive\Documents\internship\rec_program\savdir\p"
+# Read the JSON file containing the Session Directory
+with open('gpane_dir.json', 'r') as file:
+    session_data = json.load(file)
+
+# Get the directory path from the JSON data
+pth = session_data["gpane_directory"]
 
 lst = os.listdir(pth)
 vid_name = lst[-1]
 
 targetPattern = f"{pth}\\POINT*" 
-# targetPattern = f"{pth}\\DEPTH*"
 campth = glob.glob(targetPattern)
 
 targetPattern_param = f"{pth}\\PARAM*"
@@ -122,9 +127,9 @@ cento=pos[aurco_flag][centers[2][1],centers[2][0]]
 centz=pos[aurco_flag][centers[0][1],centers[0][0]]
 centx=pos[aurco_flag][centers[1][1],centers[1][0]]
 
-print(np.linalg.norm(cento-centz)*100)
-print(np.linalg.norm(cento-centx)*100)
-print(np.linalg.norm(centz-centx)*100)
+# print(np.linalg.norm(cento-centz)*100)
+# print(np.linalg.norm(cento-centx)*100)
+# print(np.linalg.norm(centz-centx)*100)
 
 
 # Assigning centers to origin, x axis and z axis
@@ -136,7 +141,6 @@ for i in range(3):
                 centz=pos[aurco_flag][centers[i][1],centers[i][0]]
                 centx=pos[aurco_flag][centers[3-j-i][1],centers[3-j-i][0]]
                 print('Centers assigned')
-quit()
 #verifiying centers
 org_z=np.add(centz,-cento)*100
 org_x=np.add(cento,-centx)*100
@@ -162,12 +166,12 @@ print('rotmat : ',rotMat)
 print('origin : ',cento)
 
 # Saving the roation Matrix and the origin to files
-with open(r'upperbody\D435_rotmat.txt', 'w') as fp:
+with open(pth+r'\upperbody\D435_rotmat.txt', 'w') as fp:
     for item in rotMat:
         # write each item on a new line
         fp.write("%s\n" % item)
 
-with open(r'upperbody\D435_org.txt', 'w') as fp:
+with open(pth+r'\upperbody\D435_org.txt', 'w') as fp:
     for item in cento:
         # write each item on a new line
         fp.write("%s\n" % item)

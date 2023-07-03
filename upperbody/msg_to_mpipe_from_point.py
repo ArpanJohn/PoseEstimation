@@ -11,11 +11,16 @@ from support.funcs import *
 import pandas as pd
 from natsort import natsorted
 import re
+import json
 
-pth = r"C:\Users\arpan\OneDrive\Documents\internship\rec_program\savdir\Session_27-06-23_11-29-04_3971"
+# Read the JSON file containing the Session Directory
+with open('session_directory.json', 'r') as file:
+    session_data = json.load(file)
+
+# Get the directory path from the JSON data
+pth = session_data["directory"]
 
 lst = os.listdir(pth)
-vid_name = lst[-1]
 
 targetPattern = f"{pth}\\POINT*"
 campth = glob.glob(targetPattern)
@@ -508,4 +513,4 @@ for index,j in df.iterrows():
 
 print(df.head())
 
-df.to_csv(pth+'\mpipef16.csv',index=False)
+df.to_csv(pth+'\\mpipe.csv',index=False)

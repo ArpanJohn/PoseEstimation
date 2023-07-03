@@ -14,10 +14,8 @@ import threading
 from queue import Queue
 import glob
 import matplotlib.pyplot as plt
-import re
 import json
-
-import keyboard
+import re
 
 # getting Date and time
 now = datetime.now()
@@ -25,20 +23,23 @@ today = date.today()
 
 # initializing things
 SessDir=[]
+stop = Queue()
+# Initializing the queues
+color_image_queue, depth_frame_queue=Queue(),Queue()
+param_queue=Queue()
 
 class recorder():
     def __init__(self):
         # Setting the parameters of the stream
-        # self.h = 720  
-        # self.w = 1280 
-        self.h = 480 
-        self.w = 640 
+        self.h = 720  
+        self.w = 1280 
+        # self.h = 480 
+        # self.w = 640 
         self.fps=30
         self.f=0
 
         # Initializing lists of color, depth, and parameters
-        self.color_image_list=[]
-        self.depth_frame_list=[]
+
         self.stream_parm_list=[]
 
         # Stop flag
@@ -54,7 +55,6 @@ class recorder():
         self.device_product_line = str(self.device.get_info(rs.camera_info.product_line))
 
         self.pc = rs.pointcloud()
-
 
     def run(self):
         t1 = threading.Thread(target=self.readframe)
@@ -73,22 +73,22 @@ class recorder():
 
         # Creating necessary files
         self.createFile(self.fileCounter)
+        SessDir.append(self.sessionDir)
 
         # Saving stream parameters to parameters file
-        parameters=self.stream_parm_list.pop(0)
+        parameters=param_queue.get()
         p_packed = msgp.packb(str(parameters)+str(self.fps))
         self.paramFile.write(p_packed)
+        
+        while not stop.get():
+            # Get color image and depth frame from queue to calculate pointcloud and save to files     
+            while not color_image_queue.empty():
+                # Getting the frames from queue
+                color_image=color_image_queue.get()
+                depth_frame=depth_frame_queue.get()
 
-
-        while not self.stop_flag:
-            if not len(self.color_image_list) == 0 and not len(self.depth_frame_list) == 0 and not len(self.stream_parm_list) == 0:
-                # print number of items in queue
-                # print('Queue size : ', color_image_queue.qsize(), end = '\r')
-
-                # Getting the frames from lists
-                color_image=self.color_image_list.pop(0)
-                depth_frame=self.depth_frame_list.pop(0)
-                d_timestamp=self.stream_parm_list.pop(0)
+                # getting the time stamp of the depth frame
+                timestamp=(rs.frame.get_frame_metadata(depth_frame,rs.frame_metadata_value.time_of_arrival))
 
                 # Calculating the pointcloud
                 try:
@@ -96,13 +96,13 @@ class recorder():
                     v = points.get_vertices()
                     verts = np.asanyarray(v).view(np.float32)
                     xyzpos=verts.reshape(self.h,self.w, 3)  # xyz
-                    point_image=xyzpos.astype(np.float16)            
+                    xyzpos=xyzpos.astype(np.float16)            
                 except:
                     print('error in pointcloud calculation')
 
-
                 # Saving frames to msgpack files
-                self.save_frames(color_image, point_image, d_timestamp, self.colourfile, self.depthfile, self.paramFile)
+                self.save_frames(color_image, xyzpos, timestamp, 
+                                self.colourfile, self.depthfile, self.paramFile)
                 
                 # Counting frames in each msgpack
                 self.counter = self.counter + 1
@@ -115,9 +115,7 @@ class recorder():
                     self.createFile(self.fileCounter)
                     self.counter = 1   
 
-
         # saving the directory for saving the time graph
-        SessDir.append(self.sessionDir)
         self.paramFile.close()
 
     def createFile(self, fileCounter):
@@ -140,7 +138,7 @@ class recorder():
         # creating the files
         if fileCounter == 1:
             self.rnd = random.randint(999)
-            self.sessionName = "Session_" + self.tm1 + "_" + self.tm2 + "_" + str(self.rnd)+str(self.f)
+            self.sessionName = "Session_que_" + self.tm1 + "_" + self.tm2 + "_" + str(self.rnd)+str(self.f)
             self.sessionDir = os.path.join(self.savingDir, self.sessionName)
             self.temp_save = os.path.join(self.temp_dir, self.sessionName)
             os.mkdir(self.sessionDir)
@@ -162,7 +160,6 @@ class recorder():
         self.colourfile = open(self.colourfilename, 'wb')
 
         print(f"creating files {fileCounter}")
-
             
     def save_frames(self,colorImg, depthImg, milliseconds, colorFile, depthFile, paramsfile):
         # saving the depth information
@@ -179,20 +176,41 @@ class recorder():
         paramsfile.write(p_packed)
 
     def readframe(self):
+        # Configure depth and color streams
+        pipeline = rs.pipeline()
+        config = rs.config()
+
+        # Get device product line for setting a supporting resolution
+        pipeline_wrapper = rs.pipeline_wrapper(pipeline)
+        pipeline_profile = config.resolve(pipeline_wrapper)
+        device = pipeline_profile.get_device()
+        device_product_line = str(device.get_info(rs.camera_info.product_line))
+
+        # Checking if there is an RGB camera
+        found_rgb = False
+        for s in device.sensors:
+            if s.get_info(rs.camera_info.name) == 'RGB Camera':
+                found_rgb = True
+                break
+        if not found_rgb:
+            print("The demo requires Depth camera with Color sensor")
+            exit(0)
+
         # Starting the stream for depth/color cameras
-        self.config.enable_stream(rs.stream.color, self.w, self.h, rs.format.bgr8, self.fps)
-        self.config.enable_stream(rs.stream.depth, self.w, self.h, rs.format.z16, self.fps)
+        config.enable_stream(rs.stream.color, self.w, self.h, rs.format.bgr8, self.fps)
+
+        config.enable_stream(rs.stream.depth, self.w, self.h, rs.format.z16, self.fps)
 
         try:
             # Start streaming from file
-            profile=self.pipeline.start(self.config)   
+            profile=pipeline.start(config)    
 
             # Getting depth intrinsics
             profiled = profile.get_stream(rs.stream.depth)
             profile1d=profiled.as_video_stream_profile() 
             intr = profile1d.get_intrinsics()   
             intr=str(intr) 
-            self.stream_parm_list.append('depth intrinsics:'+intr) 
+            param_queue.put('depth intrinsics:'+intr) 
 
             # initializing alignment
             align_to = rs.stream.color
@@ -200,17 +218,14 @@ class recorder():
 
             # Number of frames 
             c=0
-            
-            while True:
+            start_time = time.time()
+            while time.time() - start_time < 200:
                 # Checking if there are more frames
-                frame_present, frameset = self.pipeline.try_wait_for_frames()
+                frame_present, frameset = pipeline.try_wait_for_frames()
                     
                 #End loop once video finishes
                 if not frame_present:
-                    continue
-
-                # Wait for a coherent pair of frames: depth and color
-                # frames = self.pipeline.wait_for_frames()
+                    break
 
                 # Aligning the depth and color frames
                 aligned_frames = align.process(frameset)
@@ -226,30 +241,34 @@ class recorder():
                 # Convert images to numpy arrays
                 color_image = np.asanyarray(color_frame.get_data()) 
 
+                # Signal that thread1 is running
+                stop.put(False)
+                
                 # limit size of queues to 10
-                while len(self.color_image_list)>10:
-                    self.color_image_list.pop(0)
-                    self.depth_frame_list.pop(0)
-                    self.stream_parm_list.pop(0)      
-                    print('binned')
+                while color_image_queue.qsize()>10:
+                    color_image_queue.get()
+                    depth_frame_queue.get()
+                    # print('binned')
 
-                # putting the items in the lists for processing and saving
-                self.color_image_list.append(color_image)
-                self.depth_frame_list.append(aligned_depth_frame)
-                self.stream_parm_list.append(rs.frame.get_frame_metadata(depth_frame,rs.frame_metadata_value.time_of_arrival))
+                # putting the images in the queues
+                color_image_queue.put(color_image)
+                depth_frame_queue.put(aligned_depth_frame)
                     
                 # Show images
+                cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
                 cv2.imshow('RealSense', color_image)
                 if cv2.waitKey(5) & 0xFF == ord('q'):
-                    self.stop_flag = True
                     break
                 c+=1
                 
         finally:
+
             # Stop streaming
-            self.pipeline.stop()
+            stop.put(True)
+            pipeline.stop()
             cv2.destroyAllWindows()
-    
+
+        
 if __name__ == '__main__':
 
     thread = recorder()
@@ -301,26 +320,17 @@ for unpacked in unpacker:
 rec_dur=timestamps[-1]-timestamps[0]
 
 # Print the parameters of the recording
-print(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
+print(('recording duration '+f"{rec_dur:.3}"+' s'+'\nresolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
 print('number of frames:', len(timestamps))
+
+correlation = np.corrcoef(range(len(timestamps)),timestamps)[0,1]
+
+print(f'Pearson product moment correlation coefficient: {correlation}')
 
 # Show the graph of time of arrival of each frame (should be linear)
 plt.plot(range(len(timestamps)),timestamps)
-plt.title(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
+plt.title(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)+f'\nlinearity: {correlation:.8}'))
 plt.xlabel('frame')
 plt.ylabel('epoch time in seconds')
 plt.savefig(pth+'/time_graph.jpg')
-plt.show()
-
-
-# timer
-# timer=int(input('enter timer'))
-
-# while timer:  
-#     array = np.zeros((720, 1280, 3),dtype = np.uint8)
-#     blank_display=cv2.flip(array,1)
-#     m, s = divmod(timer, 60)  
-#     timeleft = '{:02d}:{:02d}'.format(m, s) 
-#     print(timeleft, end="\r")  
-#     time.sleep(1)  
-#     timer = timer-1 
+# plt.show()
