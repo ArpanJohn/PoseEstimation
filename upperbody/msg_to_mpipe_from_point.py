@@ -304,44 +304,50 @@ for k, j in land_marks.items():
             startflag = 0  # Reset the start flag to 0 for the next occlusion check
 
 
+# Read the JSON file containing the Session Directory
+with open('gpane_dir.json', 'r') as file:
+    session_data = json.load(file)
+
+# Get the directory path from the JSON data
+g_pth = session_data["gpane_directory"]
 
 # converting mpipe to mocap frame
-# rotmat=[]
-# org=[]
-# with open('D435_rotmat.txt', 'r') as fp:
-#     for line in fp:
-#         x = line[:-1]
-#         x=x.replace(']','')
-#         x=x.replace('[','')
-#         line=x.split(' ')
-#         while ' ' in line:
-#             line=line.remove(' ')
-#         while '' in line:
-#             ind=line.index('')
-#             line.pop(ind)
-#         x=[]
-#         for i in line:
-#             x.append(float(i))
-#         rotmat.append(x)
-#     rotmat=np.array(rotmat)
+rotmat=[]
+org=[]
+with open(g_pth+'D435_rotmat.txt', 'r') as fp:
+    for line in fp:
+        x = line[:-1]
+        x=x.replace(']','')
+        x=x.replace('[','')
+        line=x.split(' ')
+        while ' ' in line:
+            line=line.remove(' ')
+        while '' in line:
+            ind=line.index('')
+            line.pop(ind)
+        x=[]
+        for i in line:
+            x.append(float(i))
+        rotmat.append(x)
+    rotmat=np.array(rotmat)
 
-# with open('D435_org.txt', 'r') as fp:
-#     for line in fp:
-#         x = line[:-1]
-#         x=x.replace(']','')
-#         x=x.replace('[','')
-#         org.append([float(x)])
-#     k_org=np.array(org)
+with open(g_pth+'D435_org.txt', 'r') as fp:
+    for line in fp:
+        x = line[:-1]
+        x=x.replace(']','')
+        x=x.replace('[','')
+        org.append([float(x)])
+    k_org=np.array(org)
 
-# for index,j in df.iterrows():
-#     for k in range(1,1+7*3,3):
-#         point=[]
-#         for p in range(k,k+3):
-#             point.append(j[p])
-#         converted_point=frame_con(point,rotmat,org)
-#         # print(converted_point)
-#         for o in range(3):
-#             df.iloc[index,k+o]=converted_point[o]
+for index,j in df.iterrows():
+    for k in range(1,1+7*3,3):
+        point=[]
+        for p in range(k,k+3):
+            point.append(j[p])
+        converted_point=frame_con(point,rotmat,org)
+        # print(converted_point)
+        for o in range(3):
+            df.iloc[index,k+o]=converted_point[o]
 
 
 # Saving the 3D points of each landmark
