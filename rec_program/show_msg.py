@@ -136,31 +136,7 @@ for i in cpth:
             for mark, data_point in zip(mp_holistic.PoseLandmark, results.pose_landmarks.landmark):
                 dic[mark.value] = dict(landmark = mark.name, 
                     x = data_point.x,
-                    y = data_point.y)        
-            try:
-                LS.append([dic[11]['x']*w,dic[11]['y']*h])
-            except:
-                LS.append(np.nan)
-            try:
-                LE.append([dic[13]['x']*w,dic[13]['y']*h])
-            except:
-                LE.append(np.nan)
-            try:
-                LW.append([dic[15]['x']*w,dic[15]['y']*h])
-            except:
-                LW.append(np.nan)
-            try:
-                RS.append([dic[12]['x']*w,dic[12]['y']*h])
-            except:
-                RS.append(np.nan)
-            try:
-                RE.append([dic[14]['x']*w,dic[14]['y']*h])
-            except:
-                RE.append(np.nan)
-            try:
-                RW.append([dic[16]['x']*w,dic[16]['y']*h])
-            except:
-                RW.append(np.nan)
+                    y = data_point.y)       
             
             try:
                 Smid=midpoint([dic[11]['x']*w,dic[11]['y']*h],[dic[12]['x']*w,dic[12]['y']*h])
@@ -168,14 +144,11 @@ for i in cpth:
                 perpy=(int(Smid[1])+25)
 
                 cv2.circle(color_image,(perpx,perpy) , 5, (0, 0, 255), 2)
-                TR.append([perpx,perpy])     #in uv format  
+
             except:
-                TR.append(np.nan)
+                pass
 
             try:
-                RI.append([dic[20]['x']*w,dic[20]['y']*h])
-                LI.append([dic[19]['x']*w,dic[19]['y']*h])
-
                 # Drawing the boxes around limbs for occlusion
                 draw_box(color_image,[dic[11]['x']*w,dic[11]['y']*h],[dic[13]['x']*w,dic[13]['y']*h])
                 draw_box(color_image,[dic[12]['x']*w,dic[12]['y']*h],[dic[14]['x']*w,dic[14]['y']*h])
@@ -184,21 +157,9 @@ for i in cpth:
                 draw_box(color_image,[dic[16]['x']*w,dic[16]['y']*h],([dic[20]['x']*w,dic[20]['y']*h]),(255,0,255),40)
                 draw_box(color_image,[dic[15]['x']*w,dic[15]['y']*h],([dic[19]['x']*w,dic[19]['y']*h]),(0,255,255),40) 
             except:
-                RI.append(np.nan)
-                LI.append(np.nan)
+                pass
         except:
-            LS.append(np.nan)
-            LE.append(np.nan)
-            LW.append(np.nan)
-
-            RS.append(np.nan)
-            RE.append(np.nan)
-            RW.append(np.nan)
-
-            TR.append(np.nan) 
-            RI.append(np.nan)
-            LI.append(np.nan)
-            pass 
+            pass
 
         # Enter key 'q' to break the loop
         if cv2.waitKey(5) & 0xFF == ord('q'):

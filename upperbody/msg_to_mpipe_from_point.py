@@ -10,8 +10,13 @@ import mediapipe as mp
 from support.funcs import *
 import pandas as pd
 from natsort import natsorted
-import re
+import re as re_str
 import json
+import time
+from pympler import asizeof
+
+# Measure the execution time
+start_time = time.time()
 
 # Read the JSON file containing the Session Directory
 with open('upperbody\SessionDirectory.json', 'r') as file:
@@ -48,7 +53,7 @@ parameters=parameters.replace(']', '')
 parameters=parameters.replace('[', '')
 
 # removing letters
-modified_string = re.sub('[a-zA-Z]', '', parameters)
+modified_string = re_str.sub('[a-zA-Z]', '', parameters)
 modified_string = modified_string.strip()
 
 # splitting the string and assigning the parameters
@@ -72,7 +77,7 @@ cpth=natsorted(cpth)
 campth=natsorted(campth)
 
 # Initializing the landmark lists
-LS, LE, LW, RS, RE, RW, TR = [], [], [], [], [], [], []
+LS, LE, LW, RS, RE, RW, TR = [],[],[],[],[],[],[]
 RI,LI=[],[]
  
 # Initializing the drawing utils for drawing the facial landmarks on image
@@ -93,15 +98,29 @@ holistic_model = mp_holistic.Holistic(
     min_tracking_confidence=0.5
 )
 
-for i in cpth:
-    # print(i)
+# Dictionary containing landmark names and corresponding values with mediapipe landmark number
+land_marks = {'LS': [LS,11], 'LE': [LE,13], 'LW': [LW,15], 'RS': [RS,12], 'RE': [RE,14], 'RW': [RW,16], 'TR': [TR,0]}
+
+# pandas dataframe to hold landmark values
+df=pd.DataFrame()
+xyz=['_x','_y','_z']
+
+df['epoch_time']=pd.Series(timestamps)
+
+for i,j in zip(cpth,campth):
+
     col_file = open(i, "rb")
     unpacker = None
     unpacker = msgp.Unpacker(col_file, object_hook=mpn.decode)
-    for unpacked in unpacker:
+    depth_file = open(j, "rb")
+    d_unpacker = None
+    d_unpacker = msgp.Unpacker(depth_file, object_hook=mpn.decode)
+    for unpacked,d_unpacked in zip(unpacker,d_unpacker):
         c+=1
         imagep=unpacked
-        
+
+        pointcloud=np.asanyarray(d_unpacked)
+
         # Making predictions using holistic model
         # To improve performance, optionally mark the image as not writeable to
         # pass by reference.
@@ -137,41 +156,24 @@ for i in cpth:
             for mark, data_point in zip(mp_holistic.PoseLandmark, results.pose_landmarks.landmark):
                 dic[mark.value] = dict(landmark = mark.name, 
                     x = data_point.x,
-                    y = data_point.y)        
-            try:
-                LS.append([dic[11]['x']*w,dic[11]['y']*h])
-            except:
-                LS.append(np.nan)
-            try:
-                LE.append([dic[13]['x']*w,dic[13]['y']*h])
-            except:
-                LE.append(np.nan)
-            try:
-                LW.append([dic[15]['x']*w,dic[15]['y']*h])
-            except:
-                LW.append(np.nan)
-            try:
-                RS.append([dic[12]['x']*w,dic[12]['y']*h])
-            except:
-                RS.append(np.nan)
-            try:
-                RE.append([dic[14]['x']*w,dic[14]['y']*h])
-            except:
-                RE.append(np.nan)
-            try:
-                RW.append([dic[16]['x']*w,dic[16]['y']*h])
-            except:
-                RW.append(np.nan)
-            
-            try:
-                Smid=midpoint([dic[11]['x']*w,dic[11]['y']*h],[dic[12]['x']*w,dic[12]['y']*h])
-                perpx=int(Smid[0])
-                perpy=(int(Smid[1])+25)
+                    y = data_point.y)   
 
-                cv2.circle(color_image,(perpx,perpy) , 5, (0, 0, 255), 2)
-                TR.append([perpx,perpy])     #in uv format  
-            except:
-                TR.append(np.nan)
+            for key,value in land_marks.items():    
+                if value[1] !=0:     
+                    try:
+                        value[0].append(pointcloud[int(dic[value[1]]['y']*h)][int(dic[value[1]]['x']*w)])
+                    except:
+                        value[0].append(np.array([np.nan,np.nan,np.nan]))
+                else:
+                    try:
+                        Smid=midpoint([dic[11]['x']*w,dic[11]['y']*h],[dic[12]['x']*w,dic[12]['y']*h])
+                        perpx=int(Smid[0])
+                        perpy=(int(Smid[1])+25)
+
+                        cv2.circle(color_image,(perpx,perpy) , 5, (0, 0, 255), 2)
+                        TR.append(pointcloud[perpy][perpx])     #in uv format  
+                    except:
+                        TR.append(np.array([np.nan,np.nan,np.nan]))
 
             try:
                 RI.append([dic[20]['x']*w,dic[20]['y']*h])
@@ -191,11 +193,9 @@ for i in cpth:
             LS.append(np.nan)
             LE.append(np.nan)
             LW.append(np.nan)
-
             RS.append(np.nan)
             RE.append(np.nan)
             RW.append(np.nan)
-
             TR.append(np.nan) 
             RI.append(np.nan)
             LI.append(np.nan)
@@ -214,50 +214,24 @@ for i in cpth:
                 break
         except:
             continue
+
+    depth_file.close()
     col_file.close()
 
-cv2.destroyAllWindows()
-
-
-pos = []
-c=0
-for i in campth:
-    # print(i)
-    depth_file = open(i, "rb")
-    unpacker = None
-    unpacker = msgp.Unpacker(depth_file, object_hook=mpn.decode)
-    for unpacked in unpacker:
-        c+=1
-        unpacked=np.asanyarray(unpacked) 
-        pos.append(unpacked)
-    depth_file.close()
 
 cv2.destroyAllWindows()
-pos=np.array(pos)
-print(pos.shape)
-
-# Dictionary containing landmark names and corresponding values
-land_marks = {'LS': LS, 'LE': LE, 'LW': LW, 'RS': RS, 'RE': RE, 'RW': RW, 'TR': TR}
-
-# pandas dataframe to hold landmark values
-df=pd.DataFrame()
-xyz=['_x','_y','_z']
-
-df['epoch_time']=pd.Series(timestamps)
 
 for key,value in land_marks.items():    
     for j in range(3):
         data=[]
-        for i in range(len(pos)):
+        for i in range(frames):
             try:
-                x=pos[i][int((value[i][1]))][int((value[i][0]))][j]
+                x=value[0][i][j]
                 data.append(x)
             except:
                 continue
         df[key+xyz[j]]=pd.Series(data)
 
-# take the stuff out of memory
-pos = None
 # Finding and correcting occlusions based on boxes
 startflag = 0  # Flag to track the starting frame of occlusion
 before_occ = 0  # Frame before occlusion
@@ -351,7 +325,7 @@ for index,j in df.iterrows():
 
 # Saving the 3D points of each landmark
 xyz=['x','y','z']
-ls,le,lw,rs,RE,rw=[],[],[],[],[],[]
+ls,le,lw,rs,re,rw=[],[],[],[],[],[]
 
 c=1
 for i,j in df.iterrows():
@@ -392,7 +366,7 @@ for i,j in df.iterrows():
         for p in range(k,k+3):
             point.append(j[p])
         point=np.array(point)        
-        RE.append(point)
+        re.append(point)
 c+=3
 for i,j in df.iterrows():
     for k in range(c,c+3,3):
@@ -408,14 +382,14 @@ le=np.array(le)
 lw=np.array(lw)
 
 rs=np.array(rs) 
-RE=np.array(RE)
+re=np.array(re)
 rw=np.array(rw)
 
 # Finding the distances between the landmarks
 lu=list(ls-le) # Left upper arm
 ll=list(le-lw) # Left lower arm
-ru=list(rs-RE) # Rigth upper arm
-rl=list(RE-rw) # Right lower arm
+ru=list(rs-re) # Rigth upper arm
+rl=list(re-rw) # Right lower arm
 ss=list(rs-ls) # Biacromial length / distance between shoulder
 
 for i in range(len(lu)):
@@ -519,3 +493,9 @@ for index,j in df.iterrows():
 print(df.head())
 
 df.to_csv(pth+'\\mpipe.csv',index=False)
+
+# Calculate the elapsed time
+elapsed_time = time.time() - start_time
+
+# Print the elapsed time
+print(f"Program executed in {elapsed_time:.2f} seconds")

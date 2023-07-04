@@ -28,22 +28,22 @@ stop = Queue()
 color_image_queue, depth_frame_queue=Queue(),Queue()
 param_queue=Queue()
 
+# set the recording time
+rec_time= 200 #int(input('set the recording time in seconds'))
+
 class recorder():
     def __init__(self):
         # Setting the parameters of the stream
-        # self.h = 720  
-        # self.w = 1280 
-        self.h = 480 
-        self.w = 640 
+        self.h = 720  
+        self.w = 1280 
+        # self.h = 480 
+        # self.w = 640 
         self.fps=30
         self.f=0
 
         # Initializing lists of color, depth, and parameters
-
         self.stream_parm_list=[]
 
-        # Stop flag
-        self.stop_flag=False
         # initializing base parameters
         self.pipeline = rs.pipeline()
         self.config = rs.config()
@@ -219,7 +219,8 @@ class recorder():
             # Number of frames 
             c=0
             start_time = time.time()
-            while time.time() - start_time < 200:
+            while time.time() - start_time < rec_time:
+                print(f"{rec_time-(time.time() - start_time):.0f}" , end = '\r')
                 # Checking if there are more frames
                 frame_present, frameset = pipeline.try_wait_for_frames()
                     
@@ -248,7 +249,6 @@ class recorder():
                 while color_image_queue.qsize()>10:
                     color_image_queue.get()
                     depth_frame_queue.get()
-                    # print('binned')
 
                 # putting the images in the queues
                 color_image_queue.put(color_image)
@@ -333,4 +333,4 @@ plt.title(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'
 plt.xlabel('frame')
 plt.ylabel('epoch time in seconds')
 plt.savefig(pth+'/time_graph.jpg')
-# plt.show()
+plt.show()
