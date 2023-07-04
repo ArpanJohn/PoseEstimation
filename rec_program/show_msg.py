@@ -1,34 +1,34 @@
-# Importing necessary libraries
+#getting the data and running the model
 import numpy as np
 import cv2
 import msgpack as msgp
 import msgpack_numpy as mpn
 import glob
+import os
+import time
+import mediapipe as mp
+from support.funcs import *
 from natsort import natsorted
 import re
+import json
 
-# Setting the parameters of the stream
-fps = 30
-windowscale = 1
+# Read the JSON file containing the Session Directory
+with open('upperbody\SessionDirectory.json', 'r') as file:
+    session_data = json.load(file)
 
+# Get the directory path from the JSON data
+pth = session_data["directory"]
 
-# Path to session folder
-pth = r"C:\Users\arpan\OneDrive\Documents\internship\rec_program\savdir\Session_27-06-23_08-29-51_561"
+lst = os.listdir(pth)
 
-# Getting the COLOR files
-targetPattern_colour = f"{pth}\\COLOUR*"
-cpth = glob.glob(targetPattern_colour)
-
-# Gettin the DEPTH files
 targetPattern = f"{pth}\\POINT*"
 campth = glob.glob(targetPattern)
 
-# Getting the parameter file
 targetPattern_param = f"{pth}\\PARAM*"
 ppth = glob.glob(targetPattern_param)
 
-# sorting
-cpth=natsorted(cpth)
+targetPattern_colour = f"{pth}\\COLOUR*"
+cpth = glob.glob(targetPattern_colour)
 
 #obtaining parameters and list time_stamps
 p = open(ppth[0], "rb")
@@ -64,77 +64,155 @@ rec_dur=timestamps[-1]-timestamps[0]
 
 # Print the parameters of the recording
 print(('recording duration '+f"{rec_dur:.3}"+' s'+'\nresolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
+print('number of frames:', len(timestamps))
 
-c = 0
-# Iterate over each file path in 'cpth'
+# Sorting the color and depth files
+cpth=natsorted(cpth)
+campth=natsorted(campth)
+
+# Initializing the landmark lists
+LS, LE, LW, RS, RE, RW, TR = [], [], [], [], [], [], []
+RI,LI=[],[]
+ 
+# Initializing the drawing utils for drawing the facial landmarks on image
+mp_drawing = mp.solutions.drawing_utils
+ 
+# Initializing current time and precious time for calculating the FPS
+previousTime = 0
+currentTime = 0
+
+frames=0
+
+c=0
+
+# Initializing the model to locate the landmarks
+mp_holistic = mp.solutions.holistic
+holistic_model = mp_holistic.Holistic(
+    min_detection_confidence=0.5,
+    min_tracking_confidence=0.5
+)
+
 for i in cpth:
-    print(i)
-
-    # Open the file in binary mode
+    # print(i)
     col_file = open(i, "rb")
-
-    # Create an unpacker object with custom decoding using msgpack_numpy
+    unpacker = None
     unpacker = msgp.Unpacker(col_file, object_hook=mpn.decode)
-
-    # Iterate over each unpacked data in the unpacker
     for unpacked in unpacker:
-        c += 1
+        c+=1
+        imagep=unpacked
+        
+        # Making predictions using holistic model
+        # To improve performance, optionally mark the image as not writeable to
+        # pass by reference.
+        imagep.flags.writeable = False
+        results = holistic_model.process(imagep)
+        try:
+            imagep.flags.writeable = True
+        except:
+            imagep.flags.writeable = False
 
-        # Convert unpacked data to color image
-        color_image = cv2.flip(unpacked,1)
+        color_image = imagep
 
-        # Display the resulting image
-        cv2.imshow("extracted image", color_image)
+        #Drawing the pose landmarks
+        mp_drawing.draw_landmarks(
+        imagep,
+        results.pose_landmarks,
+        mp_holistic.POSE_CONNECTIONS)
+        
+        # Calculating the FPS
+        currentTime = time.time()
+        fps = 1 / (currentTime-previousTime)
+        previousTime = currentTime
 
-        # Press 'q' key to break the loop
+        # Displaying FPS on the image
+        cv2.putText(color_image, str(int(fps))+" FPS", (10, 70), cv2.FONT_HERSHEY_COMPLEX, 1, (0,255,0), 2)
+        cv2.putText(color_image, str(int(frames))+' total_frames', (900, 70), cv2.FONT_HERSHEY_COMPLEX, 1, (0,255,0), 2)
+        cv2.putText(color_image, str(i.split('\\')[-1]), (10, 650), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
+        frames+=1
+
+        # Finding and saving the landmark positions        
+        try:
+            dic = {}
+            for mark, data_point in zip(mp_holistic.PoseLandmark, results.pose_landmarks.landmark):
+                dic[mark.value] = dict(landmark = mark.name, 
+                    x = data_point.x,
+                    y = data_point.y)        
+            try:
+                LS.append([dic[11]['x']*w,dic[11]['y']*h])
+            except:
+                LS.append(np.nan)
+            try:
+                LE.append([dic[13]['x']*w,dic[13]['y']*h])
+            except:
+                LE.append(np.nan)
+            try:
+                LW.append([dic[15]['x']*w,dic[15]['y']*h])
+            except:
+                LW.append(np.nan)
+            try:
+                RS.append([dic[12]['x']*w,dic[12]['y']*h])
+            except:
+                RS.append(np.nan)
+            try:
+                RE.append([dic[14]['x']*w,dic[14]['y']*h])
+            except:
+                RE.append(np.nan)
+            try:
+                RW.append([dic[16]['x']*w,dic[16]['y']*h])
+            except:
+                RW.append(np.nan)
+            
+            try:
+                Smid=midpoint([dic[11]['x']*w,dic[11]['y']*h],[dic[12]['x']*w,dic[12]['y']*h])
+                perpx=int(Smid[0])
+                perpy=(int(Smid[1])+25)
+
+                cv2.circle(color_image,(perpx,perpy) , 5, (0, 0, 255), 2)
+                TR.append([perpx,perpy])     #in uv format  
+            except:
+                TR.append(np.nan)
+
+            try:
+                RI.append([dic[20]['x']*w,dic[20]['y']*h])
+                LI.append([dic[19]['x']*w,dic[19]['y']*h])
+
+                # Drawing the boxes around limbs for occlusion
+                draw_box(color_image,[dic[11]['x']*w,dic[11]['y']*h],[dic[13]['x']*w,dic[13]['y']*h])
+                draw_box(color_image,[dic[12]['x']*w,dic[12]['y']*h],[dic[14]['x']*w,dic[14]['y']*h])
+                draw_box(color_image,[dic[13]['x']*w,dic[13]['y']*h],[dic[15]['x']*w,dic[15]['y']*h])
+                draw_box(color_image,[dic[14]['x']*w,dic[14]['y']*h],[dic[16]['x']*w,dic[16]['y']*h])
+                draw_box(color_image,[dic[16]['x']*w,dic[16]['y']*h],([dic[20]['x']*w,dic[20]['y']*h]),(255,0,255),40)
+                draw_box(color_image,[dic[15]['x']*w,dic[15]['y']*h],([dic[19]['x']*w,dic[19]['y']*h]),(0,255,255),40) 
+            except:
+                RI.append(np.nan)
+                LI.append(np.nan)
+        except:
+            LS.append(np.nan)
+            LE.append(np.nan)
+            LW.append(np.nan)
+
+            RS.append(np.nan)
+            RE.append(np.nan)
+            RW.append(np.nan)
+
+            TR.append(np.nan) 
+            RI.append(np.nan)
+            LI.append(np.nan)
+            pass 
+
+        # Enter key 'q' to break the loop
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
-        
+         
+        cv2.imshow("pose landmarks", color_image)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
         try:
-            if unpacked == -1:
+            if (unpacked)==-1:
                 cv2.destroyAllWindows()
                 break
         except:
-            pass
-
-    # Close the file after processing
-    col_file.close()
-
-# Iterate over each file path in 'cpth'
-for i in campth:
-    print(i)
-
-    # Open the file in binary mode
-    col_file = open(i, "rb")
-
-    # Create an unpacker object with custom decoding using msgpack_numpy
-    unpacker = msgp.Unpacker(col_file, object_hook=mpn.decode)
-
-    # Iterate over each unpacked data in the unpacker
-    for unpacked in unpacker:
-        c += 1
-        unpacked=np.asanyarray(unpacked)
-        unpacked=unpacked.reshape(h,w,3)
-        unpacked=unpacked[:,:,2]
-        # Convert unpacked data to color image
-        color_image = cv2.flip(unpacked,1)
-
-        # Display the resulting image
-        cv2.imshow("extracted image", color_image)
-
-        # Press 'q' key to break the loop
-        if cv2.waitKey(5) & 0xFF == ord('q'):
-            break
-        
-        try:
-            if unpacked == -1:
-                cv2.destroyAllWindows()
-                break
-        except:
-            pass
-
-    # Close the file after processing
+            continue
     col_file.close()
 
 cv2.destroyAllWindows()
-

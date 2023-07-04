@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import json
 
 # Read the JSON file containing the Session Directory
-with open('gpane_dir.json', 'r') as file:
+with open('upperbody\gpane_dir.json', 'r') as file:
     session_data = json.load(file)
 
 # Get the directory path from the JSON data
@@ -110,9 +110,9 @@ for corner in corners:
         cv2.circle(image, (x, y), 50, (0, 255, 0), 2)
 
 # Show the result
-# cv2.imshow("Result", image)
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
+cv2.imshow("Result", image)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
 
 # cento=pos[aurco_flag][centers[2][1]][centers[2][0]][1]
 # centz=pos[aurco_flag][centers[0][1]][centers[0][0]][1]
@@ -166,12 +166,12 @@ print('rotmat : ',rotMat)
 print('origin : ',cento)
 
 # Saving the roation Matrix and the origin to files
-with open(pth+r'\upperbody\D435_rotmat.txt', 'w') as fp:
+with open(pth+r'\D435_rotmat.txt', 'w') as fp:
     for item in rotMat:
         # write each item on a new line
         fp.write("%s\n" % item)
 
-with open(pth+r'\upperbody\D435_org.txt', 'w') as fp:
+with open(pth+r'\D435_org.txt', 'w') as fp:
     for item in cento:
         # write each item on a new line
         fp.write("%s\n" % item)

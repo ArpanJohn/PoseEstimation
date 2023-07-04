@@ -31,10 +31,10 @@ param_queue=Queue()
 class recorder():
     def __init__(self):
         # Setting the parameters of the stream
-        self.h = 720  
-        self.w = 1280 
-        # self.h = 480 
-        # self.w = 640 
+        # self.h = 720  
+        # self.w = 1280 
+        self.h = 480 
+        self.w = 640 
         self.fps=30
         self.f=0
 

@@ -14,7 +14,7 @@ import re
 import json
 
 # Read the JSON file containing the Session Directory
-with open('session_directory.json', 'r') as file:
+with open('upperbody\SessionDirectory.json', 'r') as file:
     session_data = json.load(file)
 
 # Get the directory path from the JSON data
@@ -94,7 +94,7 @@ holistic_model = mp_holistic.Holistic(
 )
 
 for i in cpth:
-    print(i)
+    # print(i)
     col_file = open(i, "rb")
     unpacker = None
     unpacker = msgp.Unpacker(col_file, object_hook=mpn.decode)
@@ -205,7 +205,7 @@ for i in cpth:
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
          
-        cv2.imshow("pose landmarks", color_image)
+        # cv2.imshow("pose landmarks", color_image)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
         try:
@@ -222,7 +222,7 @@ cv2.destroyAllWindows()
 pos = []
 c=0
 for i in campth:
-    print(i)
+    # print(i)
     depth_file = open(i, "rb")
     unpacker = None
     unpacker = msgp.Unpacker(depth_file, object_hook=mpn.decode)
@@ -288,7 +288,7 @@ for k, j in land_marks.items():
 
                     for p in values[2]:
                         if df[k+'_z'].tolist()[before_occ] > df[p+'_z'].tolist()[before_occ]:
-                            print(k, 'is occluded by', key, p, 'at frame', i)
+                            # print(k, 'is occluded by', key, p, 'at frame', i)
                             # Uncomment the following lines to correct the occlusion
                             # df.loc[i, k+'_x'] = df.loc[before_occ, k+'_y']
                             # df.loc[i, k+'_y'] = df.loc[before_occ, k+'_x']
@@ -305,7 +305,7 @@ for k, j in land_marks.items():
 
 
 # Read the JSON file containing the Session Directory
-with open('gpane_dir.json', 'r') as file:
+with open('upperbody\gpane_dir.json', 'r') as file:
     session_data = json.load(file)
 
 # Get the directory path from the JSON data
@@ -314,7 +314,7 @@ g_pth = session_data["gpane_directory"]
 # converting mpipe to mocap frame
 rotmat=[]
 org=[]
-with open(g_pth+'D435_rotmat.txt', 'r') as fp:
+with open(g_pth+'\\D435_rotmat.txt', 'r') as fp:
     for line in fp:
         x = line[:-1]
         x=x.replace(']','')
@@ -331,7 +331,7 @@ with open(g_pth+'D435_rotmat.txt', 'r') as fp:
         rotmat.append(x)
     rotmat=np.array(rotmat)
 
-with open(g_pth+'D435_org.txt', 'r') as fp:
+with open(g_pth+'\\D435_org.txt', 'r') as fp:
     for line in fp:
         x = line[:-1]
         x=x.replace(']','')
@@ -348,7 +348,6 @@ for index,j in df.iterrows():
         # print(converted_point)
         for o in range(3):
             df.iloc[index,k+o]=converted_point[o]
-
 
 # Saving the 3D points of each landmark
 xyz=['x','y','z']
