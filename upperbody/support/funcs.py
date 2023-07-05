@@ -222,7 +222,7 @@ def point_in_quad(point, quadrilateral):
     path = Path(vertices)
     return path.contains_point(point)
 
-def draw_box(image, point1, point2, color=(0, 255, 0), dis=30):
+def draw_box(image, point1, point2, color=(0, 255, 0), dis=20):
     """
     Draw a box around two points using OpenCV.
 
