@@ -34,10 +34,10 @@ rec_time= 200 #int(input('set the recording time in seconds'))
 class recorder():
     def __init__(self):
         # Setting the parameters of the stream
-        self.h = 720  
-        self.w = 1280 
-        # self.h = 480 
-        # self.w = 640 
+        # self.h = 720  
+        # self.w = 1280 
+        self.h = 480 
+        self.w = 640 
         self.fps=30
         self.f=0
 
@@ -54,6 +54,8 @@ class recorder():
         self.device = self.pipeline_profile.get_device()
         self.device_product_line = str(self.device.get_info(rs.camera_info.product_line))
 
+        self.sensor = self.device.query_sensors()[1]
+        self.sensor.set_option(rs.option.exposure, 100)
         self.pc = rs.pointcloud()
 
     def run(self):

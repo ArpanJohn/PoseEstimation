@@ -13,7 +13,6 @@ from natsort import natsorted
 import re as re_str
 import json
 import time
-from pympler import asizeof
 
 # Measure the execution time
 start_time = time.time()
@@ -117,8 +116,16 @@ for i,j in zip(cpth,campth):
     d_unpacker = msgp.Unpacker(depth_file, object_hook=mpn.decode)
     for unpacked,d_unpacked in zip(unpacker,d_unpacker):
         c+=1
-        imagep=unpacked
+        img=unpacked
+        
+        # define the contrast and brightness value
+        contrast = 4. # Contrast control ( 0 to 127)
+        brightness = 1.5 # Brightness control (0-100)
 
+        # call addWeighted function. use beta = 0 to effectively only operate on one image
+        out = cv2.addWeighted( img, contrast, img, 0, brightness)
+
+        imagep = np.asanyarray(out)
         pointcloud=np.asanyarray(d_unpacked)
 
         # Making predictions using holistic model
@@ -205,7 +212,7 @@ for i,j in zip(cpth,campth):
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
          
-        # cv2.imshow("pose landmarks", color_image)
+        cv2.imshow("pose landmarks", color_image)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
         try:
