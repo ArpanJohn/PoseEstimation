@@ -13,7 +13,6 @@ from natsort import natsorted
 import re as re_str
 import json
 import time
-from pympler import asizeof
 
 # Measure the execution time
 start_time = time.time()
