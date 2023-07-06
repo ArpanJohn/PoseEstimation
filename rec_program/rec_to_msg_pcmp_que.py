@@ -29,15 +29,15 @@ color_image_queue, depth_frame_queue=Queue(),Queue()
 param_queue=Queue()
 
 # set the recording time
-rec_time= 200 #int(input('set the recording time in seconds'))
+rec_time= 100 #int(input('set the recording time in seconds'))
 
 class recorder():
     def __init__(self):
         # Setting the parameters of the stream
-        self.h = 720  
-        self.w = 1280 
-        # self.h = 480 
-        # self.w = 640 
+        # self.h = 720  
+        # self.w = 1280 
+        self.h = 480 
+        self.w = 640 
         self.fps=30
         self.f=0
 
@@ -53,6 +53,12 @@ class recorder():
         self.pipeline_profile = self.config.resolve(self.pipeline_wrapper)
         self.device = self.pipeline_profile.get_device()
         self.device_product_line = str(self.device.get_info(rs.camera_info.product_line))
+
+        # filter = rs.temporal_filter()
+        # filter.set_option()
+
+        self.sensor = self.device.first_color_sensor()
+        self.sensor.set_option(rs.option.exposure,100)
 
         self.pc = rs.pointcloud()
 
@@ -333,4 +339,4 @@ plt.title(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'
 plt.xlabel('frame')
 plt.ylabel('epoch time in seconds')
 plt.savefig(pth+'/time_graph.jpg')
-plt.show()
+# plt.show()

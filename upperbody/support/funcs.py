@@ -36,7 +36,7 @@ def RMSE(y_true, y_pred,time_true,time_pred):
     time_true=tt2
 
     y_pred=savgol_filter(y_pred,  int(len(y_pred)/20),3)
-    y_true=savgol_filter(y_true,  int(len(y_true)/20),3)
+    y_true=savgol_filter(y_true,  5,3)
     y_true_dic={}
     y_true_shortened=[]
     y_true_dic = {time_true[i]: y_true[i] for i in range(len(y_true))}
@@ -74,7 +74,7 @@ def RMSE(y_true, y_pred,time_true,time_pred):
     while (len(y_true_shortened)>len(y_pred)):
         y_true_shortened.pop(0)
 
-    return np.sqrt(np.mean((np.array(y_true_shortened) - np.array(y_pred)) ** 2)  )
+    return np.sqrt(np.mean((np.array(y_true_shortened) - np.array(y_pred)) ** 2)) , abs(np.max((np.array(y_true_shortened) - np.array(y_pred))))
 
 def angle3point(a,b,c):
     import mpmath
@@ -88,7 +88,6 @@ def angle3point(a,b,c):
     
     ba = a - b
     bc = c - b
-
 
     cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
     angle = np.arccos(cosine_angle)
@@ -351,20 +350,85 @@ def rotation_angles(matrix):
     r21, r22, r23 = matrix[1]
     r31, r32, r33 = matrix[2]
 
+    theta1_neg = False
+    theta2_neg = False
+    theta3_neg = False
+
+    if r32 < 0:
+        theta1_neg = True
+    if r12 > 0: 
+        theta2_neg = True
+    if r13 < 0:
+        theta3_neg = True 
+
+    if not theta1_neg:
+        if np.rad2deg(np.arctan(r32 / r22)) > 180:
+            theta1=(90)
+        elif np.rad2deg(np.arctan(r32 / r22)) < -180:
+            theta1=(-90)
+        elif np.rad2deg(np.arctan(r32 / r22)) < 0:
+            theta1=(180+np.rad2deg(np.arctan(r32 / r22)))
+        else:
+            theta1=(np.rad2deg(np.arctan(r32 / r22)))
+    else:
+        if np.rad2deg(np.arctan(r32 / r22)) > 180:
+            theta1=(90)
+        elif np.rad2deg(np.arctan(r32 / r22)) < -180:
+            theta1=(-90)
+        elif np.rad2deg(np.arctan(r32 / r22)) < 0:
+            theta1=(np.rad2deg(np.arctan(r32 / r22)))
+        else:
+            theta1=(np.rad2deg(np.arctan(r32 / r22))-180)
+    
+    if not theta2_neg:
+        if np.rad2deg(np.arctan((-r12 * np.cos(np.deg2rad(theta1)) / r22))) > 180:
+            theta2=(90)
+        elif np.rad2deg(np.arctan((-r12 * np.cos(np.deg2rad(theta1)) / r22))) < -180:
+            theta2=(-90)
+        elif np.rad2deg(np.arctan((-r12 * np.cos(np.deg2rad(theta1)) / r22))) < 0:
+            theta2=(180+np.rad2deg(np.arctan(-r12 * np.cos(np.deg2rad(theta1)) / r22)))
+        else:
+            theta2=(np.rad2deg(np.arctan((-r12 * np.cos(np.deg2rad(theta1)) / r22))))
+    else:
+        if np.rad2deg(np.arctan((-r12 * np.cos(np.deg2rad(theta1)) / r22))) > 180:
+            theta2=(90)
+        elif np.rad2deg(np.arctan((-r12 * np.cos(np.deg2rad(theta1)) / r22))) < -180:
+            theta2=(-90)
+        elif np.rad2deg(np.arctan((-r12 * np.cos(np.deg2rad(theta1)) / r22))) < 0:
+            theta2=np.rad2deg(np.arctan(-r12 * np.cos(np.deg2rad(theta1)) / r22))
+        else:
+            theta2=(np.rad2deg(np.arctan(-r12 * np.cos(np.deg2rad(theta1)) / r22))-180)
+    
+    if not theta3_neg:
+        if np.rad2deg(np.arctan((r13 / r11))) > 180:
+            theta3=(90)
+        elif np.rad2deg(np.arctan((r13 / r11))) < -180:
+            theta3=(-90)
+        elif np.rad2deg(np.arctan((r13 / r11))) < 0:
+            theta3=(180+np.rad2deg(np.arctan((r13 / r11))))
+        else:
+            theta3=(np.rad2deg(np.arctan((r13 / r11))))
+    else:
+        if np.rad2deg(np.arctan((r13 / r11))) > 180:
+            theta3=(90)
+        elif np.rad2deg(np.arctan((r13 / r11))) < -180:
+            theta3=(-90)
+        elif np.rad2deg(np.arctan((r13 / r11))) < 0:
+            theta3=np.rad2deg(np.arctan((r13 / r11)))
+        else:
+            theta3=(np.rad2deg(np.arctan((r13 / r11)))-180)
+    theta1 = -theta1
+    theta2 = -theta2
+    theta3 = -theta3
+
     # xzy
-    theta1 = np.arctan(r32 / r22)
-    theta2 = np.arctan(-r12 * np.cos(theta1) / r22)
-    theta3 = np.arctan(r13 / r11)
+    # theta1 = np.arctan(r32 / r22)
+    # theta2 = np.arctan(-r12 * np.cos(theta1) / r22)
+    # theta3 = np.arctan(r13 / r11)
 
-    #yzx
-    # theta1 = np.arctan(-r31 / r11)
-    # theta2 = np.arctan(r21 * np.cos(theta1) / r11)
-    # theta3 = np.arctan(-r23 / r22)
-
-
-    theta1 = -theta1 * 180 / np.pi
-    theta2 = -theta2 * 180 / np.pi
-    theta3 = -theta3 * 180 / np.pi
+    # theta1 = -theta1 * 180 / np.pi
+    # theta2 = -theta2 * 180 / np.pi
+    # theta3 = -theta3 * 180 / np.pi
 
     return [theta1, theta2, theta3]
 
