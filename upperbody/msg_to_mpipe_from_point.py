@@ -99,7 +99,6 @@ y_data1 = []
 x_data2 = []
 y_data2 = []
 
-
 # Initializing the model to locate the landmarks
 mp_holistic = mp.solutions.holistic
 holistic_model = mp_holistic.Holistic(
@@ -120,171 +119,175 @@ df['epoch_time']=pd.Series(timestamps)
 
 for i,j in zip(cpth,campth):
 
-    col_file = open(i, "rb")
-    unpacker = None
-    unpacker = msgp.Unpacker(col_file, object_hook=mpn.decode)
-    depth_file = open(j, "rb")
-    d_unpacker = None
-    d_unpacker = msgp.Unpacker(depth_file, object_hook=mpn.decode)
-    for unpacked,d_unpacked in zip(unpacker,d_unpacker):
-        c+=1
-        # define the contrast and brightness value
-        contrast = 1.5 # Contrast control ( 0 to 127)
-        brightness =20  # Brightness control (0-100)
+    try:
+        col_file = open(i, "rb")
+        unpacker = None
+        unpacker = msgp.Unpacker(col_file, object_hook=mpn.decode)
+        depth_file = open(j, "rb")
+        d_unpacker = None
+        d_unpacker = msgp.Unpacker(depth_file, object_hook=mpn.decode)
+        for unpacked,d_unpacked in zip(unpacker,d_unpacker):
+            c+=1
+            # define the contrast and brightness value
+            contrast = 1.5 # Contrast control ( 0 to 127)
+            brightness =20  # Brightness control (0-100)
 
-        img = cv2.cvtColor(unpacked, cv2.COLOR_RGB2BGR)
-        imagep=cv2.addWeighted( img, contrast, img, 0, brightness)
-        imagep = cv2.cvtColor(imagep, cv2.COLOR_BGR2RGB)
-        imagep=np.asanyarray(imagep)
+            img = cv2.cvtColor(unpacked, cv2.COLOR_RGB2BGR)
+            imagep=cv2.addWeighted( img, contrast, img, 0, brightness)
+            imagep = cv2.cvtColor(imagep, cv2.COLOR_BGR2RGB)
+            imagep=np.asanyarray(imagep)
 
-        pointcloud=np.asanyarray(d_unpacked)
+            pointcloud=np.asanyarray(d_unpacked)
 
-        # Making predictions using holistic model
-        # To improve performance, optionally mark the image as not writeable to
-        # pass by reference.
-        imagep.flags.writeable = False
-        results = holistic_model.process(imagep)
-        try:
-            imagep.flags.writeable = True
-        except:
+            # Making predictions using holistic model
+            # To improve performance, optionally mark the image as not writeable to
+            # pass by reference.
             imagep.flags.writeable = False
-
-        color_image = imagep
-
-        #Drawing the pose landmarks
-        mp_drawing.draw_landmarks(
-        imagep,
-        results.pose_landmarks,
-        mp_holistic.POSE_CONNECTIONS)
-        
-        # Calculating the FPS
-        currentTime = time.time()
-        fps = 1 / (currentTime-previousTime)
-        previousTime = currentTime
-
-        # Displaying FPS on the image
-        cv2.putText(color_image, str(int(fps))+" FPS", (10, 70), cv2.FONT_HERSHEY_COMPLEX, 1, (0,255,0), 2)
-        cv2.putText(color_image, str(int(frames))+' total_frames', (400, 70), cv2.FONT_HERSHEY_COMPLEX, 1, (0,255,0), 2)
-        cv2.putText(color_image, str(i.split('\\')[-1]), (10, 350), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
-        frames+=1
-
-        # Finding and saving the landmark positions        
-        try:
-            dic = {}
-            for mark, data_point in zip(mp_holistic.PoseLandmark, results.pose_landmarks.landmark):
-                dic[mark.value] = dict(landmark = mark.name, 
-                    x = data_point.x,
-                    y = data_point.y)  
-            for key,value in pose_land_marks.items():    
-                            if value[1] !=0:     
-                                try:
-                                    value[0].append(pointcloud[int(dic[value[1]]['y']*h)][int(dic[value[1]]['x']*w)])
-                                except:
-                                    value[0].append(np.array([np.nan,np.nan,np.nan]))
-                            else:
-                                try:
-                                    Smid=midpoint([dic[11]['x']*w,dic[11]['y']*h],[dic[12]['x']*w,dic[12]['y']*h])
-                                    perpx=int(Smid[0])
-                                    perpy=(int(Smid[1])+25)
-
-                                    cv2.circle(color_image,(perpx,perpy) , 5, (0, 0, 255), 2)
-                                    TR.append(pointcloud[perpy][perpx])     #in uv format  
-                                except:
-                                    TR.append(np.array([np.nan,np.nan,np.nan]))
-
-            try: # boxing
-                # Drawing the boxes around limbs for occlusion
-                lub=draw_box(color_image,[dic[11]['x']*w,dic[11]['y']*h],[dic[13]['x']*w,dic[13]['y']*h])
-                rub=draw_box(color_image,[dic[12]['x']*w,dic[12]['y']*h],[dic[14]['x']*w,dic[14]['y']*h])
-                llb=draw_box(color_image,[dic[13]['x']*w,dic[13]['y']*h],[dic[15]['x']*w,dic[15]['y']*h])
-                rlb=draw_box(color_image,[dic[14]['x']*w,dic[14]['y']*h],[dic[16]['x']*w,dic[16]['y']*h])
-                lhb=draw_box(color_image,[dic[15]['x']*w,dic[15]['y']*h],([dic[19]['x']*w,dic[19]['y']*h]),(0,255,255)) 
-                rhb=draw_box(color_image,[dic[16]['x']*w,dic[16]['y']*h],([dic[20]['x']*w,dic[20]['y']*h]),(255,0,0))
-
-                box_dic = {
-                    'lub': [lub, ['LS', 'LE']],
-                    'rub': [rub, ['RS', 'RE']],
-                    'llb': [llb, ['LE', 'LW']],
-                    'rlb': [rlb, ['RE', 'RW']],
-                    'lhb': [lhb, ['LW']],
-                    'rhb': [rhb, ['RW']]
-                }
-
-                # Iterate through each landmark and associated box in the dictionary
-                for k, j in pose_land_marks.items():
-                    for key, values in box_dic.items():
-                        # Check if the landmark is inside the box
-                        try:
-                            if point_in_quad([dic[j[-1]]['x']*w,dic[j[-1]]['y']*h], values[0]) and k not in values[-1]:
-                                for p in values[-1]:
-                                    if j[0][-1][-1] > pose_land_marks[p][0][-1][-1]:
-                                        # print(k, 'is occluded by', key, p, 'at frame', frames)
-                                        j[0][-1] = [np.nan,np.nan,np.nan]
-                                        # print('corrected')
-                        except:
-                            pass
+            results = holistic_model.process(imagep)
+            try:
+                imagep.flags.writeable = True
             except:
-                pass
+                imagep.flags.writeable = False
 
-            # Clear the graph
-            ax.cla()
+            color_image = imagep
 
-            ax.set_ylim(-480,0)
-            ax.set_xlim(0,640)
+            #Drawing the pose landmarks
+            mp_drawing.draw_landmarks(
+            imagep,
+            results.pose_landmarks,
+            mp_holistic.POSE_CONNECTIONS)
+            
+            # Calculating the FPS
+            currentTime = time.time()
+            fps = 1 / (currentTime-previousTime)
+            previousTime = currentTime
 
-            # Append the data to the lists
-            x_data1.append(dic[16]['x']*w)
-            y_data1.append(-dic[16]['y']*h)
+            # Displaying FPS on the image
+            cv2.putText(color_image, str(int(fps))+" FPS", (10, 70), cv2.FONT_HERSHEY_COMPLEX, 1, (0,255,0), 2)
+            cv2.putText(color_image, str(int(frames))+' total_frames', (400, 70), cv2.FONT_HERSHEY_COMPLEX, 1, (0,255,0), 2)
+            cv2.putText(color_image, str(i.split('\\')[-1]), (10, 350), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
+            frames+=1
 
-            x_data2.append(dic[12]['x']*w)
-            y_data2.append(-dic[12]['y']*h)
+            # Finding and saving the landmark positions        
+            try:
+                dic = {}
+                for mark, data_point in zip(mp_holistic.PoseLandmark, results.pose_landmarks.landmark):
+                    dic[mark.value] = dict(landmark = mark.name, 
+                        x = data_point.x,
+                        y = data_point.y)  
+                for key,value in pose_land_marks.items():    
+                                if value[1] !=0:     
+                                    try:
+                                        value[0].append(pointcloud[int(dic[value[1]]['y']*h)][int(dic[value[1]]['x']*w)])
+                                    except:
+                                        value[0].append(np.array([np.nan,np.nan,np.nan]))
+                                else:
+                                    try:
+                                        Smid=midpoint([dic[11]['x']*w,dic[11]['y']*h],[dic[12]['x']*w,dic[12]['y']*h])
+                                        perpx=int(Smid[0])
+                                        perpy=(int(Smid[1])+25)
 
-            # Plot the data
-            ax.plot(x_data1[-20:],y_data1[-20:],color='red')
-            ax.plot(x_data2[-20:],y_data2[-20:],color='blue')
+                                        cv2.circle(color_image,(perpx,perpy) , 5, (0, 0, 255), 2)
+                                        TR.append(pointcloud[perpy][perpx])     #in uv format  
+                                    except:
+                                        TR.append(np.array([np.nan,np.nan,np.nan]))
 
-            plt.legend(['Right Wrist','Right Shoulder'])
+                try: # boxing
+                    # Drawing the boxes around limbs for occlusion
+                    lub=draw_box(color_image,[dic[11]['x']*w,dic[11]['y']*h],[dic[13]['x']*w,dic[13]['y']*h])
+                    rub=draw_box(color_image,[dic[12]['x']*w,dic[12]['y']*h],[dic[14]['x']*w,dic[14]['y']*h])
+                    llb=draw_box(color_image,[dic[13]['x']*w,dic[13]['y']*h],[dic[15]['x']*w,dic[15]['y']*h])
+                    rlb=draw_box(color_image,[dic[14]['x']*w,dic[14]['y']*h],[dic[16]['x']*w,dic[16]['y']*h])
+                    lhb=draw_box(color_image,[dic[15]['x']*w,dic[15]['y']*h],([dic[19]['x']*w,dic[19]['y']*h]),(0,255,255)) 
+                    rhb=draw_box(color_image,[dic[16]['x']*w,dic[16]['y']*h],([dic[20]['x']*w,dic[20]['y']*h]),(255,0,0))
 
-            # Adjust the plot limits if necessary
-            # ax.set_xlim(y_data1[-20],y_data1[-1])
-            # ax.relim()
-            ax.autoscale_view()
+                    box_dic = {
+                        'lub': [lub, ['LS', 'LE']],
+                        'rub': [rub, ['RS', 'RE']],
+                        'llb': [llb, ['LE', 'LW']],
+                        'rlb': [rlb, ['RE', 'RW']],
+                        'lhb': [lhb, ['LW']],
+                        'rhb': [rhb, ['RW']]
+                    }
 
-            # Update the plot
-            # plt.draw()
-            # plt.pause(0.001)
-        except:
-            LS.append([np.nan,np.nan,np.nan])
-            LE.append([np.nan,np.nan,np.nan])
-            LW.append([np.nan,np.nan,np.nan])
-            RS.append([np.nan,np.nan,np.nan])
-            RE.append([np.nan,np.nan,np.nan])
-            RW.append([np.nan,np.nan,np.nan])
-            TR.append([np.nan,np.nan,np.nan]) 
-            RI.append([np.nan,np.nan,np.nan])
-            LI.append([np.nan,np.nan,np.nan])
-            pass 
-        
-        if frames == 150:
-            quit()
-        # Enter key 'q' to break the loop
-        if cv2.waitKey(5) & 0xFF == ord('q'):
-            break
-         
-        cv2.imshow("pose landmarks", color_image)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-        try:
-            if (unpacked)==-1:
-                cv2.destroyAllWindows()
+                    # Iterate through each landmark and associated box in the dictionary
+                    for k, j in pose_land_marks.items():
+                        for key, values in box_dic.items():
+                            # Check if the landmark is inside the box
+                            try:
+                                if point_in_quad([dic[j[-1]]['x']*w,dic[j[-1]]['y']*h], values[0]) and k not in values[-1]:
+                                    for p in values[-1]:
+                                        if j[0][-1][-1] > pose_land_marks[p][0][-1][-1]:
+                                            # print(k, 'is occluded by', key, p, 'at frame', frames)
+                                            j[0][-1] = [np.nan,np.nan,np.nan]
+                                            # print('corrected')
+                            except:
+                                pass
+                except:
+                    pass
+
+                # Clear the graph
+                # ax.cla()
+
+                # ax.set_ylim(-h,0)
+                # ax.set_xlim(0,w)
+
+                # Append the data to the lists
+                # x_data1.append(dic[16]['x']*w)
+                # y_data1.append(-dic[16]['y']*h)
+
+                # x_data2.append(dic[12]['x']*w)
+                # y_data2.append(-dic[12]['y']*h)
+
+                # Plot the data
+                # ax.plot(x_data1[-20:],y_data1[-20:],color='red')
+                # ax.plot(x_data2[-20:],y_data2[-20:],color='blue')
+
+                # plt.legend(['Right Wrist','Right Shoulder'])
+
+                # Adjust the plot limits if necessary
+                # ax.set_xlim(y_data1[-20],y_data1[-1])
+                # ax.relim()
+                # ax.autoscale_view()
+
+                # Update the plot
+                # plt.draw()
+                # plt.pause(0.001)
+            except:
+                LS.append([np.nan,np.nan,np.nan])
+                LE.append([np.nan,np.nan,np.nan])
+                LW.append([np.nan,np.nan,np.nan])
+                RS.append([np.nan,np.nan,np.nan])
+                RE.append([np.nan,np.nan,np.nan])
+                RW.append([np.nan,np.nan,np.nan])
+                TR.append([np.nan,np.nan,np.nan]) 
+                RI.append([np.nan,np.nan,np.nan])
+                LI.append([np.nan,np.nan,np.nan])
+                pass 
+            
+            if frames == 150:
+                quit()
+            # Enter key 'q' to break the loop
+            if cv2.waitKey(5) & 0xFF == ord('q'):
                 break
-        except:
-            continue
+            
+            cv2.imshow("pose landmarks", color_image)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+            try:
+                if (unpacked)==-1:
+                    cv2.destroyAllWindows()
+                    break
+            except:
+                continue
+    except:
+        continue
 
     depth_file.close()
     col_file.close()
 
 cv2.destroyAllWindows()
+
 
 for key,value in pose_land_marks.items():    
     for j in range(3):

@@ -37,9 +37,11 @@ class recorder():
         # self.h = 720  
         # self.w = 1280 
         self.h = 480 
-        self.w = 640 #848
-        self.fps=15
+        self.w = 640
+        self.fps=30
         self.f=0
+        self.files_created=False
+        self.event = threading.Event()
 
         # Initializing lists of color, depth, and parameters
         self.stream_parm_list=[]
@@ -65,10 +67,15 @@ class recorder():
     def run(self):
         self.t1 = threading.Thread(target=self.readframe)
         self.t2 = threading.Thread(target=self.processing_and_saving)
+        self.t3 = threading.Thread(target=self.save2)
         self.t1.start()
         self.t2.start()
+        self.t3.start()
         self.t1.join()
         self.t2.join()
+        self.t3.join()
+        # saving the directory for saving the time graph
+        self.paramFile.close()
         print('threads done')
 
     def processing_and_saving(self):
@@ -78,15 +85,19 @@ class recorder():
         self.fileCounter = 1
 
         # Creating necessary files
-        self.createFile(self.fileCounter)
-        SessDir.append(self.sessionDir)
+        if not self.files_created:
+            self.createFile(self.fileCounter)
+            SessDir.append(self.sessionDir)
+            self.files_created=True
 
         # Saving stream parameters to parameters file
         parameters=param_queue.get()
         p_packed = msgp.packb(str(parameters)+str(self.fps))
         self.paramFile.write(p_packed)
         
-        while not stop.get():
+        while not self.event.is_set():
+            thread = threading.current_thread()
+            # print(f'Worker thread: name={thread.name}, idnet={threading.get_ident()}, id={threading.get_native_id()}')
             # Get color image and depth frame from queue to calculate pointcloud and save to files     
             while not color_image_queue.empty():
                 # Getting the frames from queue
@@ -116,13 +127,56 @@ class recorder():
                 # When 90 frames in one .msgpack file, open a new file
                 if self.counter == 90:
                     self.fileCounter = self.fileCounter + 1
-                    self.colourfile.close()
-                    self.depthfile.close()
+                    # self.colourfile.close()
+                    # self.depthfile.close()
                     self.createFile(self.fileCounter)
-                    self.counter = 1   
+                    self.counter = 1  
+            if self.event.is_set():
+                print('event set')
+                self.event.set()
+                break
+    
+    def save2(self):
+        while not self.event.is_set():
+            thread = threading.current_thread()
+            # print(f'Worker thread: name={thread.name}, idnet={threading.get_ident()}, id={threading.get_native_id()}')
+            # Get color image and depth frame from queue to calculate pointcloud and save to files     
+            while not color_image_queue.empty():
+                # Getting the frames from queue
+                color_image=color_image_queue.get()
+                depth_frame=depth_frame_queue.get()
 
-        # saving the directory for saving the time graph
-        self.paramFile.close()
+                # getting the time stamp of the depth frame
+                timestamp=(rs.frame.get_frame_metadata(depth_frame,rs.frame_metadata_value.time_of_arrival))
+
+                # Calculating the pointcloud
+                try:
+                    points = self.pc.calculate(depth_frame)
+                    v = points.get_vertices()
+                    verts = np.asanyarray(v).view(np.float32)
+                    xyzpos=verts.reshape(self.h,self.w, 3)  # xyz
+                    xyzpos=xyzpos.astype(np.float16)            
+                except:
+                    print('error in pointcloud calculation')
+
+                # Saving frames to msgpack files
+                self.save_frames(color_image, xyzpos, timestamp, 
+                                self.colourfile, self.depthfile, self.paramFile)
+                
+                # Counting frames in each msgpack
+                self.counter = self.counter + 1
+
+                # When 90 frames in one .msgpack file, open a new file
+                if self.counter == 90:
+                    self.fileCounter = self.fileCounter + 1
+                    # self.colourfile.close()
+                    # self.depthfile.close()
+                    self.createFile(self.fileCounter)
+                    self.counter = 1  
+            if self.event.is_set():
+                print('event set')
+                self.event.set()
+                break
 
     def createFile(self, fileCounter):
 
@@ -171,7 +225,7 @@ class recorder():
         # saving the depth information
         d_packed = msgp.packb(depthImg, default=mpn.encode)
         depthFile.write(d_packed)
-
+    
         # saving the color information
         c_packed = msgp.packb(colorImg, default=mpn.encode)
         colorFile.write(c_packed)
@@ -270,9 +324,14 @@ class recorder():
         finally:
 
             # Stop streaming
-            stop.put(True)
+            for i in range(10):
+                stop.put(True)
+            self.event.set()
             pipeline.stop()
             cv2.destroyAllWindows()
+
+            time.sleep(2)
+
 
         
 if __name__ == '__main__':
@@ -339,4 +398,4 @@ plt.title(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'
 plt.xlabel('frame')
 plt.ylabel('epoch time in seconds')
 plt.savefig(pth+'/time_graph.jpg')
-plt.show()
+# plt.show()

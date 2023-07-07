@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-import cv2.aruco as aruco
+import cv2.aruco as aruco # type: ignore
 import msgpack as msgp
 import msgpack_numpy as mpn
 import glob
@@ -94,12 +94,6 @@ parameters = aruco.DetectorParameters_create()
 # Detect the ArUco markers in the image
 corners, ids, _ = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
 
-for corner in corners:
-        center = np.mean(corner[0], axis=0)
-        x = int(center[0])
-        y = int(center[1])
-        cv2.circle(image, (x, y), 50, (0, 255, 0), 2)
-
 # Draw a circle around the center of each detected marker
 centers=[]
 for corner in corners:
@@ -114,23 +108,9 @@ cv2.imshow("Result", image)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-# cento=pos[aurco_flag][centers[2][1]][centers[2][0]][1]
-# centz=pos[aurco_flag][centers[0][1]][centers[0][0]][1]
-# centx=pos[aurco_flag][centers[1][1]][centers[1][0]][1]
-
-# print(cento)
-# print(centx)
-# print(centz)
-# quit()
-
 cento=pos[aurco_flag][centers[2][1],centers[2][0]]
 centz=pos[aurco_flag][centers[0][1],centers[0][0]]
 centx=pos[aurco_flag][centers[1][1],centers[1][0]]
-
-# print(np.linalg.norm(cento-centz)*100)
-# print(np.linalg.norm(cento-centx)*100)
-# print(np.linalg.norm(centz-centx)*100)
-
 
 # Assigning centers to origin, x axis and z axis
 for i in range(3):
@@ -141,11 +121,13 @@ for i in range(3):
                 centz=pos[aurco_flag][centers[i][1],centers[i][0]]
                 centx=pos[aurco_flag][centers[3-j-i][1],centers[3-j-i][0]]
                 print('Centers assigned')
+                
 #verifiying centers
-org_z=np.add(centz,-cento)*100
-org_x=np.add(cento,-centx)*100
-print(np.linalg.norm(org_z))
-print(np.linalg.norm(org_x))
+org_z=np.add(centz,-cento)
+org_x=np.add(cento,-centx)
+print(np.linalg.norm(org_z)*100)
+print(np.linalg.norm(org_x)*100)
+print(np.linalg.norm(np.add(centz,-centx))*100)
 
 # Finding the Rotation matrix
 v1 = centx - cento  # v1
