@@ -13,6 +13,7 @@ from natsort import natsorted
 import re as re_str
 import json
 import time
+import matplotlib.pyplot as plt
 
 # Measure the execution time
 start_time = time.time()
@@ -90,6 +91,15 @@ frames=0
 
 c=0
 
+fig, ax = plt.subplots()
+ax.set_ylim(-480,0)
+ax.set_xlim(0,640)
+x_data1 = []
+y_data1 = []
+x_data2 = []
+y_data2 = []
+
+
 # Initializing the model to locate the landmarks
 mp_holistic = mp.solutions.holistic
 holistic_model = mp_holistic.Holistic(
@@ -98,7 +108,7 @@ holistic_model = mp_holistic.Holistic(
 )
 
 # Dictionary containing landmark names and corresponding values with mediapipe landmark number
-pose_land_marks = {'LS': [LS,11], 'LE': [LE,13], 'LW': [LW,15], 'RS': [RS,12], 'RE': [RE,14], 'RW': [RW,16], 'TR': [TR,0],'LI':[LI,19],'RI':[RI,20],'LT':[LT,21],'RT':[RT,22],'LP':[LP,17],'RP':[RP,18]}
+pose_land_marks = {'LS': [LS,11], 'LE': [LE,13], 'LW': [LW,15], 'RS': [RS,12], 'RE': [RE,14], 'RW': [RW,16], 'TR': [TR,0]}
 l_hand_land_marks={'LI':[LI,5],'LT':[LT,2],'LP':[LP,17]}
 r_hand_land_marks={'RI':[RI,5],'RT':[RT,2],'RP':[RP,17]}
 
@@ -146,20 +156,6 @@ for i,j in zip(cpth,campth):
         imagep,
         results.pose_landmarks,
         mp_holistic.POSE_CONNECTIONS)
-
-        # Drawing Right hand Land Marks
-        mp_drawing.draw_landmarks(
-        imagep,
-        results.right_hand_landmarks,
-        mp_holistic.HAND_CONNECTIONS
-        )
-    
-        # Drawing Left hand Land Marks
-        mp_drawing.draw_landmarks(
-        imagep,
-        results.left_hand_landmarks,
-        mp_holistic.HAND_CONNECTIONS
-        )
         
         # Calculating the FPS
         currentTime = time.time()
@@ -178,76 +174,99 @@ for i,j in zip(cpth,campth):
             for mark, data_point in zip(mp_holistic.PoseLandmark, results.pose_landmarks.landmark):
                 dic[mark.value] = dict(landmark = mark.name, 
                     x = data_point.x,
-                    y = data_point.y)   
-
+                    y = data_point.y)  
             for key,value in pose_land_marks.items():    
-                if value[1] !=0:     
-                    try:
-                        value[0].append(pointcloud[int(dic[value[1]]['y']*h)][int(dic[value[1]]['x']*w)])
-                    except:
-                        value[0].append(np.array([np.nan,np.nan,np.nan]))
-                else:
-                    try:
-                        Smid=midpoint([dic[11]['x']*w,dic[11]['y']*h],[dic[12]['x']*w,dic[12]['y']*h])
-                        perpx=int(Smid[0])
-                        perpy=(int(Smid[1])+25)
+                            if value[1] !=0:     
+                                try:
+                                    value[0].append(pointcloud[int(dic[value[1]]['y']*h)][int(dic[value[1]]['x']*w)])
+                                except:
+                                    value[0].append(np.array([np.nan,np.nan,np.nan]))
+                            else:
+                                try:
+                                    Smid=midpoint([dic[11]['x']*w,dic[11]['y']*h],[dic[12]['x']*w,dic[12]['y']*h])
+                                    perpx=int(Smid[0])
+                                    perpy=(int(Smid[1])+25)
 
-                        cv2.circle(color_image,(perpx,perpy) , 5, (0, 0, 255), 2)
-                        TR.append(pointcloud[perpy][perpx])     #in uv format  
-                    except:
-                        TR.append(np.array([np.nan,np.nan,np.nan]))
+                                    cv2.circle(color_image,(perpx,perpy) , 5, (0, 0, 255), 2)
+                                    TR.append(pointcloud[perpy][perpx])     #in uv format  
+                                except:
+                                    TR.append(np.array([np.nan,np.nan,np.nan]))
+
+            try: # boxing
+                # Drawing the boxes around limbs for occlusion
+                lub=draw_box(color_image,[dic[11]['x']*w,dic[11]['y']*h],[dic[13]['x']*w,dic[13]['y']*h])
+                rub=draw_box(color_image,[dic[12]['x']*w,dic[12]['y']*h],[dic[14]['x']*w,dic[14]['y']*h])
+                llb=draw_box(color_image,[dic[13]['x']*w,dic[13]['y']*h],[dic[15]['x']*w,dic[15]['y']*h])
+                rlb=draw_box(color_image,[dic[14]['x']*w,dic[14]['y']*h],[dic[16]['x']*w,dic[16]['y']*h])
+                lhb=draw_box(color_image,[dic[15]['x']*w,dic[15]['y']*h],([dic[19]['x']*w,dic[19]['y']*h]),(0,255,255)) 
+                rhb=draw_box(color_image,[dic[16]['x']*w,dic[16]['y']*h],([dic[20]['x']*w,dic[20]['y']*h]),(255,0,0))
+
+                box_dic = {
+                    'lub': [lub, ['LS', 'LE']],
+                    'rub': [rub, ['RS', 'RE']],
+                    'llb': [llb, ['LE', 'LW']],
+                    'rlb': [rlb, ['RE', 'RW']],
+                    'lhb': [lhb, ['LW']],
+                    'rhb': [rhb, ['RW']]
+                }
+
+                # Iterate through each landmark and associated box in the dictionary
+                for k, j in pose_land_marks.items():
+                    for key, values in box_dic.items():
+                        # Check if the landmark is inside the box
+                        try:
+                            if point_in_quad([dic[j[-1]]['x']*w,dic[j[-1]]['y']*h], values[0]) and k not in values[-1]:
+                                for p in values[-1]:
+                                    if j[0][-1][-1] > pose_land_marks[p][0][-1][-1]:
+                                        # print(k, 'is occluded by', key, p, 'at frame', frames)
+                                        j[0][-1] = [np.nan,np.nan,np.nan]
+                                        # print('corrected')
+                        except:
+                            pass
+            except:
+                pass
+
+            # Clear the graph
+            ax.cla()
+
+            ax.set_ylim(-480,0)
+            ax.set_xlim(0,640)
+
+            # Append the data to the lists
+            x_data1.append(dic[16]['x']*w)
+            y_data1.append(-dic[16]['y']*h)
+
+            x_data2.append(dic[12]['x']*w)
+            y_data2.append(-dic[12]['y']*h)
+
+            # Plot the data
+            ax.plot(x_data1[-20:],y_data1[-20:],color='red')
+            ax.plot(x_data2[-20:],y_data2[-20:],color='blue')
+
+            plt.legend(['Right Wrist','Right Shoulder'])
+
+            # Adjust the plot limits if necessary
+            # ax.set_xlim(y_data1[-20],y_data1[-1])
+            # ax.relim()
+            ax.autoscale_view()
+
+            # Update the plot
+            # plt.draw()
+            # plt.pause(0.001)
         except:
-            LS.append(np.nan)
-            LE.append(np.nan)
-            LW.append(np.nan)
-            RS.append(np.nan)
-            RE.append(np.nan)
-            RW.append(np.nan)
-            TR.append(np.nan) 
-            RI.append(np.nan)
-            LI.append(np.nan)
+            LS.append([np.nan,np.nan,np.nan])
+            LE.append([np.nan,np.nan,np.nan])
+            LW.append([np.nan,np.nan,np.nan])
+            RS.append([np.nan,np.nan,np.nan])
+            RE.append([np.nan,np.nan,np.nan])
+            RW.append([np.nan,np.nan,np.nan])
+            TR.append([np.nan,np.nan,np.nan]) 
+            RI.append([np.nan,np.nan,np.nan])
+            LI.append([np.nan,np.nan,np.nan])
             pass 
         
-        # Finding and saving the landmark positions        
-        try:
-            dic = {}
-            for mark, data_point in zip(mp_holistic.HandLandmark, results.left_hand_landmarks.landmark):
-                dic[mark.value] = dict(landmark = mark.name, 
-                    x = data_point.x,
-                    y = data_point.y)   
-
-            for key,value in l_hand_land_marks.items():    
-                if value[1] !=0:     
-                    try:
-                        value[0].append(pointcloud[int(dic[value[1]]['y']*h)][int(dic[value[1]]['x']*w)])
-                    except:
-                        value[0].append(np.array([np.nan,np.nan,np.nan]))
-
-
-        except:
-            LT.append(np.nan)
-            LI.append(np.nan)
-            LP.append(np.nan)
-
-        # Finding and saving the landmark positions        
-        try:
-            dic = {}
-            for mark, data_point in zip(mp_holistic.HandLandmark, results.right_hand_landmarks.landmark):
-                dic[mark.value] = dict(landmark = mark.name, 
-                    x = data_point.x,
-                    y = data_point.y)   
-
-            for key,value in r_hand_land_marks.items():    
-                if value[1] !=0:     
-                    try:
-                        value[0].append(pointcloud[int(dic[value[1]]['y']*h)][int(dic[value[1]]['x']*w)])
-                    except:
-                        value[0].append(np.array([np.nan,np.nan,np.nan]))
-        except:
-            RT.append(np.nan)
-            RI.append(np.nan)
-            RP.append(np.nan)
-
+        if frames == 150:
+            quit()
         # Enter key 'q' to break the loop
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
@@ -277,74 +296,6 @@ for key,value in pose_land_marks.items():
             except:
                 continue
         df[key+xyz[j]]=pd.Series(data)
-
-for key,value in l_hand_land_marks.items():    
-    for j in range(3):
-        data=[]
-        for i in range(frames):
-            try:
-                x=value[0][i][j]
-                data.append(x)
-            except:
-                continue
-        df[key+xyz[j]]=pd.Series(data)
-
-for key,value in r_hand_land_marks.items():    
-    for j in range(3):
-        data=[]
-        for i in range(frames):
-            try:
-                x=value[0][i][j]
-                data.append(x)
-            except:
-                continue
-        df[key+xyz[j]]=pd.Series(data)
-
-# # Finding and correcting occlusions based on boxes
-# startflag = 0  # Flag to track the starting frame of occlusion
-# before_occ = 0  # Frame before occlusion
-# do = False  # Flag indicating whether occlusion is occurring or not
-
-# box_dic = {
-#     'lub': [LS, LE, ['LS', 'LE']],
-#     'rub': [RS, RE, ['RS', 'RE']],
-#     'llb': [LE, LW, ['LE', 'LW']],
-#     'rlb': [RE, RW, ['RE', 'RW']],
-#     'lhb': [LW, LI, ['LW', 'LI', 'LT','LP']],
-#     'rhb': [RW, RI, ['RW', 'RI', 'RT','RP']]
-# }
-
-# # Iterate through each landmark and associated box in the dictionary
-# for k, j in pose_land_marks.items():
-#     for key, values in box_dic.items():
-#         # Iterate through each frame
-#         for i in range(c):
-#             r = 40 if key == 'lhb' or key == 'rhb' else 30  # Radius for drawing the box
-
-#             try:
-#                 # Check if the landmark is inside the box and not already occluded
-#                 if point_in_quad(j[i], draw_box(color_image, values[0][i], values[1][i], (0, 0, 1), r)) and k not in values[-1]:
-#                     if startflag == 0:
-#                         startflag = i
-#                         before_occ = startflag - 1  # Frame before occlusion
-
-#                     for p in values[2]:
-#                         if df[k+'_z'].tolist()[before_occ] > df[p+'_z'].tolist()[before_occ]:
-#                             # print(k, 'is occluded by', key, p, 'at frame', i)
-#                             # Uncomment the following lines to correct the occlusion
-#                             # df.loc[i, k+'_x'] = df.loc[before_occ, k+'_y']
-#                             # df.loc[i, k+'_y'] = df.loc[before_occ, k+'_x']
-#                             df.loc[i, k+'_z'] = df.loc[before_occ, k+'_z']
-
-#                     do = True  # Set occlusion flag to True
-#             except:
-#                 pass
-#             else:
-#                 do = False  # Set occlusion flag to False
-
-#         if do:
-#             startflag = 0  # Reset the start flag to 0 for the next occlusion check
-
 
 # Read the JSON file containing the Session Directory
 with open('upperbody\gpane_dir.json', 'r') as file:
