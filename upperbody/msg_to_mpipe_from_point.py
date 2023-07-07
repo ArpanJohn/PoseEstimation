@@ -120,7 +120,7 @@ for i,j in zip(cpth,campth):
         c+=1
         # define the contrast and brightness value
         contrast = 1.5 # Contrast control ( 0 to 127)
-        brightness =30  # Brightness control (0-100)
+        brightness =20  # Brightness control (0-100)
 
         img = cv2.cvtColor(unpacked, cv2.COLOR_RGB2BGR)
         imagep=cv2.addWeighted( img, contrast, img, 0, brightness)
@@ -168,8 +168,8 @@ for i,j in zip(cpth,campth):
 
         # Displaying FPS on the image
         cv2.putText(color_image, str(int(fps))+" FPS", (10, 70), cv2.FONT_HERSHEY_COMPLEX, 1, (0,255,0), 2)
-        cv2.putText(color_image, str(int(frames))+' total_frames', (900, 70), cv2.FONT_HERSHEY_COMPLEX, 1, (0,255,0), 2)
-        cv2.putText(color_image, str(i.split('\\')[-1]), (10, 650), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
+        cv2.putText(color_image, str(int(frames))+' total_frames', (400, 70), cv2.FONT_HERSHEY_COMPLEX, 1, (0,255,0), 2)
+        cv2.putText(color_image, str(i.split('\\')[-1]), (10, 350), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
         frames+=1
 
         # Finding and saving the landmark positions        
@@ -196,19 +196,6 @@ for i,j in zip(cpth,campth):
                         TR.append(pointcloud[perpy][perpx])     #in uv format  
                     except:
                         TR.append(np.array([np.nan,np.nan,np.nan]))
-
-            try:
-                pass
-                # Drawing the boxes around limbs for occlusion
-                # draw_box(color_image,[dic[11]['x']*w,dic[11]['y']*h],[dic[13]['x']*w,dic[13]['y']*h])
-                # draw_box(color_image,[dic[12]['x']*w,dic[12]['y']*h],[dic[14]['x']*w,dic[14]['y']*h])
-                # draw_box(color_image,[dic[13]['x']*w,dic[13]['y']*h],[dic[15]['x']*w,dic[15]['y']*h])
-                # draw_box(color_image,[dic[14]['x']*w,dic[14]['y']*h],[dic[16]['x']*w,dic[16]['y']*h])
-                # draw_box(color_image,[dic[16]['x']*w,dic[16]['y']*h],([dic[20]['x']*w,dic[20]['y']*h]),(255,0,255))
-                # draw_box(color_image,[dic[15]['x']*w,dic[15]['y']*h],([dic[19]['x']*w,dic[19]['y']*h]),(0,255,255)) 
-            except:
-                RI.append(np.nan)
-                LI.append(np.nan)
         except:
             LS.append(np.nan)
             LE.append(np.nan)

@@ -107,7 +107,7 @@ for corner in corners:
         x = int(center[0])
         y = int(center[1])
         centers.append((x,y))
-        cv2.circle(image, (x, y), 50, (0, 255, 0), 2)
+        cv2.circle(image, (x, y), 25, (0, 255, 0), 2)
 
 # Show the result
 cv2.imshow("Result", image)

@@ -362,61 +362,38 @@ def rotation_angles(matrix):
         theta3_neg = True 
 
     if not theta1_neg:
-        if np.rad2deg(np.arctan(r32 / r22)) > 180:
-            theta1=(90)
-        elif np.rad2deg(np.arctan(r32 / r22)) < -180:
-            theta1=(-90)
-        elif np.rad2deg(np.arctan(r32 / r22)) < 0:
+        if np.rad2deg(np.arctan(r32 / r22)) < 0:
             theta1=(180+np.rad2deg(np.arctan(r32 / r22)))
         else:
             theta1=(np.rad2deg(np.arctan(r32 / r22)))
     else:
-        if np.rad2deg(np.arctan(r32 / r22)) > 180:
-            theta1=(90)
-        elif np.rad2deg(np.arctan(r32 / r22)) < -180:
-            theta1=(-90)
-        elif np.rad2deg(np.arctan(r32 / r22)) < 0:
+        if np.rad2deg(np.arctan(r32 / r22)) < 0:
             theta1=(np.rad2deg(np.arctan(r32 / r22)))
         else:
             theta1=(np.rad2deg(np.arctan(r32 / r22))-180)
     
     if not theta2_neg:
-        if np.rad2deg(np.arctan((-r12 * np.cos(np.deg2rad(theta1)) / r22))) > 180:
-            theta2=(90)
-        elif np.rad2deg(np.arctan((-r12 * np.cos(np.deg2rad(theta1)) / r22))) < -180:
-            theta2=(-90)
-        elif np.rad2deg(np.arctan((-r12 * np.cos(np.deg2rad(theta1)) / r22))) < 0:
+        if np.rad2deg(np.arctan((-r12 * np.cos(np.deg2rad(theta1)) / r22))) < 0:
             theta2=(180+np.rad2deg(np.arctan(-r12 * np.cos(np.deg2rad(theta1)) / r22)))
         else:
             theta2=(np.rad2deg(np.arctan((-r12 * np.cos(np.deg2rad(theta1)) / r22))))
     else:
-        if np.rad2deg(np.arctan((-r12 * np.cos(np.deg2rad(theta1)) / r22))) > 180:
-            theta2=(90)
-        elif np.rad2deg(np.arctan((-r12 * np.cos(np.deg2rad(theta1)) / r22))) < -180:
-            theta2=(-90)
-        elif np.rad2deg(np.arctan((-r12 * np.cos(np.deg2rad(theta1)) / r22))) < 0:
+        if np.rad2deg(np.arctan((-r12 * np.cos(np.deg2rad(theta1)) / r22))) < 0:
             theta2=np.rad2deg(np.arctan(-r12 * np.cos(np.deg2rad(theta1)) / r22))
         else:
             theta2=(np.rad2deg(np.arctan(-r12 * np.cos(np.deg2rad(theta1)) / r22))-180)
     
     if not theta3_neg:
-        if np.rad2deg(np.arctan((r13 / r11))) > 180:
-            theta3=(90)
-        elif np.rad2deg(np.arctan((r13 / r11))) < -180:
-            theta3=(-90)
-        elif np.rad2deg(np.arctan((r13 / r11))) < 0:
+        if np.rad2deg(np.arctan((r13 / r11))) < 0:
             theta3=(180+np.rad2deg(np.arctan((r13 / r11))))
         else:
             theta3=(np.rad2deg(np.arctan((r13 / r11))))
     else:
-        if np.rad2deg(np.arctan((r13 / r11))) > 180:
-            theta3=(90)
-        elif np.rad2deg(np.arctan((r13 / r11))) < -180:
-            theta3=(-90)
-        elif np.rad2deg(np.arctan((r13 / r11))) < 0:
+        if np.rad2deg(np.arctan((r13 / r11))) < 0:
             theta3=np.rad2deg(np.arctan((r13 / r11)))
         else:
             theta3=(np.rad2deg(np.arctan((r13 / r11)))-180)
+            
     theta1 = -theta1
     theta2 = -theta2
     theta3 = -theta3
