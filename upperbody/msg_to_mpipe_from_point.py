@@ -288,6 +288,7 @@ for i,j in zip(cpth,campth):
 
 cv2.destroyAllWindows()
 
+print(frames)
 
 for key,value in pose_land_marks.items():    
     for j in range(3):

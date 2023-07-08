@@ -118,12 +118,12 @@ class recorder():
                 except:
                     print('error in pointcloud calculation')
 
-                while self.is_saving.is_set():
-                    pass
+                # while self.is_saving.is_set():
+                #     pass
                 # Saving frames to msgpack files
                 self.save_frames(color_image, xyzpos, timestamp, 
                                 self.colourfile, self.depthfile, self.paramFile)
-                self.is_saving.clear()
+                # self.is_saving.clear()
                 
                 # Counting frames in each msgpack
                 self.counter = self.counter + 1
@@ -131,8 +131,8 @@ class recorder():
                 # When 90 frames in one .msgpack file, open a new file
                 if self.counter == 90:
                     self.fileCounter = self.fileCounter + 1
-                    # self.colourfile.close()
-                    # self.depthfile.close()
+                    self.colourfile.close()
+                    self.depthfile.close()
                     self.createFile(self.fileCounter)
                     self.counter = 1  
             if self.event.is_set():
@@ -142,8 +142,6 @@ class recorder():
     
     def save2(self):
         while not self.event.is_set():
-            thread = threading.current_thread()
-            # print(f'Worker thread: name={thread.name}, idnet={threading.get_ident()}, id={threading.get_native_id()}')
             # Get color image and depth frame from queue to calculate pointcloud and save to files     
             while not color_image_queue.empty():
                 # Getting the frames from queue
@@ -163,13 +161,13 @@ class recorder():
                 except:
                     print('error in pointcloud calculation')
 
-                while self.is_saving.is_set():
-                    pass
+                # while self.is_saving.is_set():
+                #     pass
                 # Saving frames to msgpack files
                 self.save_frames(color_image, xyzpos, timestamp, 
                                 self.colourfile, self.depthfile, self.paramFile)
                 
-                self.is_saving.clear()
+                # self.is_saving.clear()
                 
                 # Counting frames in each msgpack
                 self.counter = self.counter + 1
@@ -177,8 +175,8 @@ class recorder():
                 # When 90 frames in one .msgpack file, open a new file
                 if self.counter == 90:
                     self.fileCounter = self.fileCounter + 1
-                    # self.colourfile.close()
-                    # self.depthfile.close()
+                    self.colourfile.close()
+                    self.depthfile.close()
                     self.createFile(self.fileCounter)
                     self.counter = 1  
             if self.event.is_set():
