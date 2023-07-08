@@ -16,6 +16,7 @@ import glob
 import matplotlib.pyplot as plt
 import json
 import re
+import keyboard
 
 # getting Date and time
 now = datetime.now()
@@ -57,9 +58,6 @@ class recorder():
         self.device = self.pipeline_profile.get_device()
         self.device_product_line = str(self.device.get_info(rs.camera_info.product_line))
 
-        # filter = rs.temporal_filter()
-        # filter.set_option()
-
         self.sensor = self.device.first_color_sensor()
         self.sensor.set_option(rs.option.exposure,100)
 
@@ -71,6 +69,7 @@ class recorder():
         self.t3 = threading.Thread(target=self.save2)
         self.t1.start()
         self.t2.start()
+        time.sleep(0.2)
         self.t3.start()
         self.t1.join()
         self.t2.join()
@@ -118,12 +117,13 @@ class recorder():
                 except:
                     print('error in pointcloud calculation')
 
-                # while self.is_saving.is_set():
-                #     pass
+                while self.depthfile.closed or self.colourfile.closed:
+                    pass
+                self.is_saving.set()
                 # Saving frames to msgpack files
                 self.save_frames(color_image, xyzpos, timestamp, 
                                 self.colourfile, self.depthfile, self.paramFile)
-                # self.is_saving.clear()
+                self.is_saving.clear()
                 
                 # Counting frames in each msgpack
                 self.counter = self.counter + 1
@@ -131,6 +131,8 @@ class recorder():
                 # When 90 frames in one .msgpack file, open a new file
                 if self.counter == 90:
                     self.fileCounter = self.fileCounter + 1
+                    while self.is_saving.is_set():
+                        pass
                     self.colourfile.close()
                     self.depthfile.close()
                     self.createFile(self.fileCounter)
@@ -161,13 +163,14 @@ class recorder():
                 except:
                     print('error in pointcloud calculation')
 
-                # while self.is_saving.is_set():
-                #     pass
+                while self.depthfile.closed or self.colourfile.closed:
+                    pass
+                self.is_saving.set()
                 # Saving frames to msgpack files
                 self.save_frames(color_image, xyzpos, timestamp, 
                                 self.colourfile, self.depthfile, self.paramFile)
                 
-                # self.is_saving.clear()
+                self.is_saving.clear()
                 
                 # Counting frames in each msgpack
                 self.counter = self.counter + 1
@@ -175,6 +178,8 @@ class recorder():
                 # When 90 frames in one .msgpack file, open a new file
                 if self.counter == 90:
                     self.fileCounter = self.fileCounter + 1
+                    while self.is_saving.is_set():
+                        pass
                     self.colourfile.close()
                     self.depthfile.close()
                     self.createFile(self.fileCounter)
@@ -325,6 +330,8 @@ class recorder():
                 cv2.imshow('RealSense', color_image)
                 if cv2.waitKey(5) & 0xFF == ord('q'):
                     break
+                if keyboard.is_pressed('q'):
+                    break
                 c+=1
                 
         finally:
@@ -404,4 +411,4 @@ plt.title(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'
 plt.xlabel('frame')
 plt.ylabel('epoch time in seconds')
 plt.savefig(pth+'/time_graph.jpg')
-# plt.show()
+plt.show()
