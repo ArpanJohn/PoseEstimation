@@ -30,7 +30,7 @@ color_image_queue, depth_frame_queue=Queue(),Queue()
 param_queue=Queue()
 
 # set the recording time
-rec_time= 1000 #int(input('set the recording time in seconds'))
+rec_time= 10 #int(input('set the recording time in seconds'))
 
 class recorder():
     def __init__(self):
@@ -411,4 +411,4 @@ plt.title(('recording duration '+f"{rec_dur:.3}"+' s'+'\n resolution :'+str(w)+'
 plt.xlabel('frame')
 plt.ylabel('epoch time in seconds')
 plt.savefig(pth+'/time_graph.jpg')
-plt.show()
+# plt.show()

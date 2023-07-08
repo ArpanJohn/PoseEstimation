@@ -269,8 +269,8 @@ for i,j in zip(cpth,campth):
             if cv2.waitKey(5) & 0xFF == ord('q'):
                 break
             
-            # cv2.imshow("pose landmarks", color_image)
-            
+            cv2.imshow("pose landmarks", color_image)
+
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
             try:
@@ -288,7 +288,7 @@ for i,j in zip(cpth,campth):
 cv2.destroyAllWindows()
 
 print(frames)
-quit()
+# quit()
 for key,value in pose_land_marks.items():    
     for j in range(3):
         data=[]
@@ -300,50 +300,61 @@ for key,value in pose_land_marks.items():
                 continue
         df[key+xyz[j]]=pd.Series(data)
 
-# Read the JSON file containing the Session Directory
-with open('upperbody\gpane_dir.json', 'r') as file:
-    session_data = json.load(file)
+df.to_csv(pth+'\\mpipe_pre.csv',index=False)
 
-# Get the directory path from the JSON data
-g_pth = session_data["gpane_directory"]
+try:
+    # Read the JSON file containing the Session Directory
+    with open('upperbody\gpane_dir.json', 'r') as file:
+        session_data = json.load(file)
 
-# converting mpipe to mocap frame
-rotmat=[]
-org=[]
-with open(g_pth+'\\D435_rotmat.txt', 'r') as fp:
-    for line in fp:
-        x = line[:-1]
-        x=x.replace(']','')
-        x=x.replace('[','')
-        line=x.split(' ')
-        while ' ' in line:
-            line=line.remove(' ')
-        while '' in line:
-            ind=line.index('')
-            line.pop(ind)
-        x=[]
-        for i in line:
-            x.append(float(i))
-        rotmat.append(x)
-    rotmat=np.array(rotmat)
+    # Get the directory path from the JSON data
+    g_pth = session_data["gpane_directory"]
 
-with open(g_pth+'\\D435_org.txt', 'r') as fp:
-    for line in fp:
-        x = line[:-1]
-        x=x.replace(']','')
-        x=x.replace('[','')
-        org.append([float(x)])
-    k_org=np.array(org)
+    # converting mpipe to mocap frame
+    rotmat=[]
+    org=[]
+    with open(g_pth+'\\D435_rotmat.txt', 'r') as fp:
+        for line in fp:
+            x = line[:-1]
+            x=x.replace(']','')
+            x=x.replace('[','')
+            line=x.split(' ')
+            while ' ' in line:
+                line=line.remove(' ')
+            while '' in line:
+                ind=line.index('')
+                line.pop(ind)
+            x=[]
+            for i in line:
+                x.append(float(i))
+            rotmat.append(x)
+        rotmat=np.array(rotmat)
 
-for index,j in df.iterrows():
-    for k in range(1,1+7*3,3):
-        point=[]
-        for p in range(k,k+3):
-            point.append(j[p])
-        converted_point=frame_con(point,rotmat,org)
-        # print(converted_point)
-        for o in range(3):
-            df.iloc[index,k+o]=converted_point[o]
+    with open(g_pth+'\\D435_org.txt', 'r') as fp:
+        for line in fp:
+            x = line[:-1]
+            x=x.replace(']','')
+            x=x.replace('[','')
+            org.append([float(x)])
+        k_org=np.array(org)
+
+    for index,j in df.iterrows():
+        for k in range(1,1+7*3,3):
+            point=[]
+            for p in range(k,k+3):
+                point.append(j[p])
+            converted_point=frame_con(point,rotmat,org)
+            # print(converted_point)
+            for o in range(3):
+                df.iloc[index,k+o]=converted_point[o]
+except:
+    pass
+
+# Iterate through all columns and applying cubic interpolation
+for column in df.columns[1:]:
+    column_series = df[column]
+    column_series = column_series.interpolate(method='spline', order=3, s=0.,limit_direction='both')
+    df[column] = column_series
 
 # Saving the 3D points of each landmark
 xyz=['x','y','z']
@@ -463,6 +474,10 @@ for index,j in df.iterrows():
             lsx=df['LS_x'].iloc[index]
             lsy=df['LS_y'].iloc[index]
             lsz=df['LS_z'].iloc[index]
+        else:
+            lsx=np.nan
+            lsy=np.nan
+            lsz=np.nan
         df['LS_x'].iloc[index]=lsx
         df['LS_y'].iloc[index]=lsy
         df['LS_z'].iloc[index]=lsz
@@ -472,6 +487,10 @@ for index,j in df.iterrows():
             lex=df['LE_x'].iloc[index]
             ley=df['LE_y'].iloc[index]
             lez=df['LE_z'].iloc[index]
+        else:
+            lex=np.nan
+            ley=np.nan
+            lez=np.nan
         df['LE_x'].iloc[index]=lex
         df['LE_y'].iloc[index]=ley
         df['LE_z'].iloc[index]=lez
@@ -481,6 +500,10 @@ for index,j in df.iterrows():
             lwx=df['LW_x'].iloc[index]
             lwy=df['LW_y'].iloc[index]
             lwz=df['LW_z'].iloc[index]
+        else:
+            lwx=np.nan
+            lwy=np.nan
+            lwz=np.nan
         df['LW_x'].iloc[index]=lwx
         df['LW_y'].iloc[index]=lwy
         df['LW_z'].iloc[index]=lwz
@@ -490,6 +513,10 @@ for index,j in df.iterrows():
             rsx=df['RS_x'].iloc[index]
             rsy=df['RS_y'].iloc[index]
             rsz=df['RS_z'].iloc[index]
+        else:
+            rsx=np.nan
+            rsy=np.nan
+            rsz=np.nan
         df['RS_x'].iloc[index]=rsx
         df['RS_y'].iloc[index]=rsy
         df['RS_z'].iloc[index]=rsz
@@ -499,6 +526,10 @@ for index,j in df.iterrows():
             rex=df['RE_x'].iloc[index]
             rey=df['RE_y'].iloc[index]
             rez=df['RE_z'].iloc[index]
+        else:
+            rex=np.nan
+            rey=np.nan
+            rez=np.nan
         df['RE_x'].iloc[index]=rex
         df['RE_y'].iloc[index]=rey
         df['RE_z'].iloc[index]=rez
@@ -508,9 +539,19 @@ for index,j in df.iterrows():
             rwx=df['RW_x'].iloc[index]
             rwy=df['RW_y'].iloc[index]
             rwz=df['RW_z'].iloc[index]
+        else:
+            rwx=np.nan
+            rwy=np.nan
+            rwz=np.nan
         df['RW_x'].iloc[index]=rwx
         df['RW_y'].iloc[index]=rwy
         df['RW_z'].iloc[index]=rwz
+    
+# Iterate through all columns and applying cubic interpolation
+for column in df.columns[1:]:
+    column_series = df[column]
+    column_series = column_series.interpolate(method='spline', order=3, s=0,limit_direction='both')
+    df[column] = column_series
 
 print(df.head())
 
