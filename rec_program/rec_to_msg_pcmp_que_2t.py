@@ -42,6 +42,7 @@ class recorder():
         self.f=0
         self.files_created=False
         self.event = threading.Event()
+        self.is_saving=threading.Event()
 
         # Initializing lists of color, depth, and parameters
         self.stream_parm_list=[]
@@ -117,9 +118,12 @@ class recorder():
                 except:
                     print('error in pointcloud calculation')
 
+                while self.is_saving.is_set():
+                    pass
                 # Saving frames to msgpack files
                 self.save_frames(color_image, xyzpos, timestamp, 
                                 self.colourfile, self.depthfile, self.paramFile)
+                self.is_saving.clear()
                 
                 # Counting frames in each msgpack
                 self.counter = self.counter + 1
@@ -159,9 +163,13 @@ class recorder():
                 except:
                     print('error in pointcloud calculation')
 
+                while self.is_saving.is_set():
+                    pass
                 # Saving frames to msgpack files
                 self.save_frames(color_image, xyzpos, timestamp, 
                                 self.colourfile, self.depthfile, self.paramFile)
+                
+                self.is_saving.clear()
                 
                 # Counting frames in each msgpack
                 self.counter = self.counter + 1
