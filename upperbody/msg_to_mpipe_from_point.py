@@ -265,13 +265,12 @@ for i,j in zip(cpth,campth):
                 LI.append([np.nan,np.nan,np.nan])
                 pass 
             
-            if frames == 150:
-                quit()
             # Enter key 'q' to break the loop
             if cv2.waitKey(5) & 0xFF == ord('q'):
                 break
             
-            cv2.imshow("pose landmarks", color_image)
+            # cv2.imshow("pose landmarks", color_image)
+            
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
             try:
@@ -289,7 +288,7 @@ for i,j in zip(cpth,campth):
 cv2.destroyAllWindows()
 
 print(frames)
-
+quit()
 for key,value in pose_land_marks.items():    
     for j in range(3):
         data=[]
