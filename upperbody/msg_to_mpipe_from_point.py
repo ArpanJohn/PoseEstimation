@@ -555,7 +555,7 @@ for column in df.columns[1:]:
     df[column] = column_series
 
 # applying savgol filter to data 
-df_filtered = pd.DataFrame(savgol_filter(df, int(len(df)/30) * 2 + 1, 3, axis=0),
+df_filtered = pd.DataFrame(savgol_filter(df, int(len(df)/40) * 2 + 3, 3, axis=0),
                                 columns=df.columns,
                                 index=df.index)
 

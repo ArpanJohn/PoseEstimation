@@ -18,29 +18,29 @@ def RMSE(y_true, y_pred,time_true,time_pred):
     time_true,time_pred : list/listlike containing the time values
     returns : RMSE value
     '''
-    yp2,tp2,yt2,tt2=[],[],[],[]
+    # yp2,tp2,yt2,tt2=[],[],[],[]
 
-    for i in range(len(y_pred)):
-        if not math.isnan(y_pred[i]):
-            yp2.append(y_pred[i])
-            tp2.append(time_pred[i])
+    # for i in range(len(y_pred)):
+    #     if not math.isnan(y_pred[i]):
+    #         yp2.append(y_pred[i])
+    #         tp2.append(time_pred[i])
     
-    for i in range(len(y_true)):
-        if not math.isnan(y_true[i]):
-            yt2.append(y_true[i])
-            tt2.append(time_true[i])
+    # for i in range(len(y_true)):
+    #     if not math.isnan(y_true[i]):
+    #         yt2.append(y_true[i])
+    #         tt2.append(time_true[i])
    
-    y_pred=yp2
-    time_pred=tp2
-    y_true=yt2
-    time_true=tt2
+    # y_pred=yp2
+    # time_pred=tp2
+    # y_true=yt2
+    # time_true=tt2
 
-    try:
-        y_pred=savgol_filter(y_pred,  int(len(y_pred)/20),3)
-    except:
-        y_pred=savgol_filter(y_pred,  int(len(y_pred)/20)+1,3)
+    # try:
+    #     y_pred=savgol_filter(y_pred,  int(len(y_pred)/20),3)
+    # except:
+    #     y_pred=savgol_filter(y_pred,  int(len(y_pred)/20)+1,3)
 
-    y_true=savgol_filter(y_true,  5,3)
+    # y_true=savgol_filter(y_true,  5,3)
     y_true_dic={}
     y_true_shortened=[]
     y_true_dic = {time_true[i]: y_true[i] for i in range(len(y_true))}
