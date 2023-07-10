@@ -414,6 +414,49 @@ def rotation_angles(matrix):
     return [theta1, theta2, theta3]
 
 
+def errors(y_true, y_pred):
+    """
+    Calculate the Root Mean Squared Error (RMSE) and maximum error between two lists.
+
+    Parameters:
+    - y_true (list): List of true values.
+    - y_pred (list): List of predicted values.
+
+    Returns:
+    - rmse (float): Root Mean Squared Error.
+    - max_error (float): Maximum error.
+
+    Raises:
+    - ValueError: If the lengths of y_true and y_pred are different.
+
+    """
+
+    # Check if both lists are of the same length
+    if len(y_true) != len(y_pred):
+        raise ValueError('Both lists must be of the same length.')
+
+    # Convert the lists to NumPy arrays
+    array1 = np.array(y_true)
+    array2 = np.array(y_pred)
+
+    # Calculate the squared difference between the two arrays
+    squared_diff = (array1 - array2) ** 2
+
+    # Calculate the mean of the squared differences
+    mean_squared_diff = squared_diff.mean()
+
+    # Calculate the RMSE
+    rmse = np.sqrt(mean_squared_diff)
+
+    ## Calculate the absolute differences between the two arrays
+    absolute_diff = np.abs(array1 - array2)
+
+    # Find the maximum error and its index
+    max_error = np.max(absolute_diff)
+    max_error_index = np.argmax(absolute_diff)
+
+    return rmse, max_error, max_error_index
+
 
 
 

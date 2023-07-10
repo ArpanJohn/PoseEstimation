@@ -555,7 +555,7 @@ for column in df.columns[1:]:
     df[column] = column_series
 
 # applying savgol filter to data 
-df_filtered = pd.DataFrame(savgol_filter(df, int(len(df)/60) * 2 + 1, 3, axis=0),
+df_filtered = pd.DataFrame(savgol_filter(df, int(len(df)/30) * 2 + 1, 3, axis=0),
                                 columns=df.columns,
                                 index=df.index)
 
@@ -564,7 +564,7 @@ df_filtered['epoch_time'] = df['epoch_time'].values
 print(df.head())
 
 df.to_csv(pth+'\\mpipe.csv',index=False)
-df_filtered.to_csv(pth+"\\mpipe_fitlered.csv",index=False)
+df_filtered.to_csv(pth+"\\mpipe_filtered.csv",index=False)
 
 # Calculate the elapsed time
 elapsed_time = time.time() - start_time
