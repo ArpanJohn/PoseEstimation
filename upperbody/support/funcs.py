@@ -35,7 +35,11 @@ def RMSE(y_true, y_pred,time_true,time_pred):
     y_true=yt2
     time_true=tt2
 
-    y_pred=savgol_filter(y_pred,  int(len(y_pred)/20),3)
+    try:
+        y_pred=savgol_filter(y_pred,  int(len(y_pred)/20),3)
+    except:
+        y_pred=savgol_filter(y_pred,  int(len(y_pred)/20)+1,3)
+
     y_true=savgol_filter(y_true,  5,3)
     y_true_dic={}
     y_true_shortened=[]

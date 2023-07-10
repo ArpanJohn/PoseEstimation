@@ -14,6 +14,7 @@ import re as re_str
 import json
 import time
 import matplotlib.pyplot as plt
+from scipy.signal import savgol_filter
 
 # Measure the execution time
 start_time = time.time()
@@ -553,9 +554,17 @@ for column in df.columns[1:]:
     column_series = column_series.interpolate(method='spline', order=3, s=0,limit_direction='both')
     df[column] = column_series
 
+# applying savgol filter to data 
+df_filtered = pd.DataFrame(savgol_filter(df, int(len(df)/60) * 2 + 1, 3, axis=0),
+                                columns=df.columns,
+                                index=df.index)
+
+df_filtered['epoch_time'] = df['epoch_time'].values
+
 print(df.head())
 
 df.to_csv(pth+'\\mpipe.csv',index=False)
+df_filtered.to_csv(pth+"\\mpipe_fitlered.csv",index=False)
 
 # Calculate the elapsed time
 elapsed_time = time.time() - start_time
