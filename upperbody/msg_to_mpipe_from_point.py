@@ -370,10 +370,16 @@ except:
     pass
 
 # Iterate through all columns and applying cubic interpolation
-for column in df.columns[1:]:
+for column in df.columns[1:20]:
     column_series = df[column]
     column_series = column_series.interpolate(method='spline', order=3, s=0.,limit_direction='both')
     df[column] = column_series
+
+# Define columns to perform constant interpolation on
+interpolate_columns = df.columns[20:]
+
+# Perform constant interpolation
+df[interpolate_columns] = df[interpolate_columns].fillna(method='ffill')
 
 # Saving the 3D points of each landmark
 xyz=['x','y','z']
@@ -567,10 +573,16 @@ for index,j in df.iterrows():
         df['RW_z'].iloc[index]=rwz
     
 # Iterate through all columns and applying cubic interpolation
-for column in df.columns[1:]:
+for column in df.columns[1:20]:
     column_series = df[column]
-    column_series = column_series.interpolate(method='spline', order=3, s=0,limit_direction='both')
+    column_series = column_series.interpolate(method='spline', order=3, s=0.,limit_direction='both')
     df[column] = column_series
+
+# Define columns to perform constant interpolation on
+interpolate_columns = df.columns[20:]
+
+# Perform constant interpolation
+df[interpolate_columns] = df[interpolate_columns].fillna(method='ffill')
 
 # applying savgol filter to data 
 df_filtered = pd.DataFrame(savgol_filter(df, int(len(df)/40) * 2 + 3, 3, axis=0),
