@@ -101,8 +101,8 @@ x_data2 = []
 y_data2 = []
 
 # Initializing the model to locate the landmarks
-mp_holistic = mp.solutions.holistic
-holistic_model = mp_holistic.Holistic(
+mp_holistic = mp.solutions.pose
+holistic_model = mp_holistic.Pose(
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5
 )
@@ -117,6 +117,15 @@ df=pd.DataFrame()
 xyz=['_x','_y','_z']
 
 df['epoch_time']=pd.Series(timestamps)
+
+size = (w, h)
+   
+# Below VideoWriter object will create
+# a frame of above defined The output 
+# is stored in 'filename.avi' file.
+result = cv2.VideoWriter(pth+'\\video.avi', 
+                         cv2.VideoWriter_fourcc(*'MJPG'),
+                         10, size)
 
 for i,j in zip(cpth,campth):
 
@@ -163,10 +172,15 @@ for i,j in zip(cpth,campth):
             fps = 1 / (currentTime-previousTime)
             previousTime = currentTime
 
+            color_image_save = color_image
+
             # Displaying FPS on the image
             cv2.putText(color_image, str(int(fps))+" FPS", (10, 70), cv2.FONT_HERSHEY_COMPLEX, 1, (0,255,0), 2)
-            cv2.putText(color_image, str(int(frames))+' total_frames', (400, 70), cv2.FONT_HERSHEY_COMPLEX, 1, (0,255,0), 2)
-            cv2.putText(color_image, str(i.split('\\')[-1]), (10, 350), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
+            # cv2.putText(color_image, str(int(frames))+' total_frames', (400, 70), cv2.FONT_HERSHEY_COMPLEX, 1, (0,255,0), 2)
+            cv2.putText(color_image, str(i.split('\\')[-1]), (10, 460), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
+            cv2.putText(color_image_save, str(i.split('\\')[-1]), (10, 460), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
+            cv2.putText(color_image_save, str(f"{timestamps[frames]-timestamps[0]:.2f}")+' seconds', (400, 70), cv2.FONT_HERSHEY_COMPLEX, 1, (0,0,255), 2)
+
             frames+=1
 
             # Finding and saving the landmark positions        
@@ -271,6 +285,9 @@ for i,j in zip(cpth,campth):
                 break
             
             cv2.imshow("pose landmarks", color_image)
+            # Write the frame into the
+            # file 'filename.avi'
+            result.write(color_image_save)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -286,6 +303,7 @@ for i,j in zip(cpth,campth):
     depth_file.close()
     col_file.close()
 
+result.release()
 cv2.destroyAllWindows()
 
 print(frames)
