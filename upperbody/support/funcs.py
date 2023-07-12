@@ -402,7 +402,7 @@ def rotation_angles(matrix):
     theta2 = -theta2
     theta3 = -theta3
 
-    # xzy
+    # # xzy
     # theta1 = np.arctan(r32 / r22)
     # theta2 = np.arctan(-r12 * np.cos(theta1) / r22)
     # theta3 = np.arctan(r13 / r11)
