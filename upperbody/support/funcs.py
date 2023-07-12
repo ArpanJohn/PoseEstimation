@@ -439,8 +439,12 @@ def errors(y_true, y_pred):
     array1 = np.array(y_true)
     array2 = np.array(y_pred)
 
+    mask = ~np.isnan(array1) & ~np.isnan(array2)
+    new_array1 = array1[mask]
+    new_array2 = array2[mask]
+    
     # Calculate the squared difference between the two arrays
-    squared_diff = (array1 - array2) ** 2
+    squared_diff = (new_array1 - new_array2) ** 2
 
     # Calculate the mean of the squared differences
     mean_squared_diff = squared_diff.mean()
@@ -449,7 +453,7 @@ def errors(y_true, y_pred):
     rmse = np.sqrt(mean_squared_diff)
 
     ## Calculate the absolute differences between the two arrays
-    absolute_diff = np.abs(array1 - array2)
+    absolute_diff = np.abs(new_array1 - new_array2)
 
     # Find the maximum error and its index
     max_error = np.max(absolute_diff)

@@ -215,8 +215,8 @@ for i,j in zip(cpth,campth):
                     rub=draw_box(color_image,[dic[12]['x']*w,dic[12]['y']*h],[dic[14]['x']*w,dic[14]['y']*h])
                     llb=draw_box(color_image,[dic[13]['x']*w,dic[13]['y']*h],[dic[15]['x']*w,dic[15]['y']*h])
                     rlb=draw_box(color_image,[dic[14]['x']*w,dic[14]['y']*h],[dic[16]['x']*w,dic[16]['y']*h])
-                    lhb=draw_box(color_image,[dic[15]['x']*w,dic[15]['y']*h],([dic[19]['x']*w,dic[19]['y']*h]),(0,0,255),dis = 25) 
-                    rhb=draw_box(color_image,[dic[16]['x']*w,dic[16]['y']*h],([dic[20]['x']*w,dic[20]['y']*h]),(255,0,0),dis = 25)
+                    lhb=draw_box(color_image,[dic[15]['x']*w,dic[15]['y']*h],([dic[19]['x']*w,dic[19]['y']*h]),(0,0,255),dis = 35) 
+                    rhb=draw_box(color_image,[dic[16]['x']*w,dic[16]['y']*h],([dic[20]['x']*w,dic[20]['y']*h]),(255,0,0),dis = 35)
 
                     box_dic = {
                         'lub': [lub, ['LS', 'LE']],
@@ -235,12 +235,12 @@ for i,j in zip(cpth,campth):
                                 if j[-1]!=0:
                                     if point_in_quad([dic[j[-1]]['x']*w,dic[j[-1]]['y']*h], values[0]) and k not in values[-1]:
                                         for p in values[-1]:
-                                            if j[0][-1][pd.Series(j[0][-1]).last_valid_index()] > pose_land_marks[p][0][-1][pd.Series(pose_land_marks[p][0][-1]).last_valid_index()]:
-                                                print(k, 'is occluded by', key, p, 'at frame', frames,str(f" \t{timestamps[frames]-timestamps[0]:.2f}")+' seconds')
+                                            if j[0][pd.Series(j[0][-1]).last_valid_index()][-1]+0.2 > pose_land_marks[p][0][pd.Series(pose_land_marks[p][0][-1]).last_valid_index()][-1] or np.isnan(j[0][-1]).any():
+                                                # print(k, 'is occluded by', key, p, 'at frame', frames,str(f" \t{timestamps[frames]-timestamps[0]:.2f}")+' seconds')
                                                 j[0][-1] = [np.nan,np.nan,np.nan]
                                                 # print('corrected')
                                 elif point_in_quad([perpx,perpy], values[0]) and k not in values[-1]:
-                                    print(k, 'is occluded by', key, 'at frame', frames, str(f" \t{timestamps[frames]-timestamps[0]:.2f}")+' seconds')
+                                    # print(k, 'is occluded by', key, 'at frame', frames, str(f" \t{timestamps[frames]-timestamps[0]:.2f}")+' seconds')
                                     j[0][-1] = [np.nan,np.nan,np.nan]
                                     # print('corrected')
                             except:
@@ -377,7 +377,7 @@ except:
     pass
 
 # Define columns to perform constant interpolation on
-interpolate_columns = ['LS_x','LS_y','LS_z','RS_x','RS_y','RS_z','TR_x','TR_y','TR_z'] #df.columns.tolist() 
+interpolate_columns = ['LS_x','LS_y','LS_z','RS_x','RS_y','RS_z','TR_x','TR_y','TR_z'] # df.columns.tolist() 
 
 # Perform constant interpolation
 df[interpolate_columns] = df[interpolate_columns].fillna(method='ffill')
@@ -579,14 +579,15 @@ for index,j in df.iterrows():
         df['RW_y'].iloc[index]=rwy
         df['RW_z'].iloc[index]=rwz
   
+print(len(df))
 # Perform constant interpolation
-df[interpolate_columns] = df[interpolate_columns].fillna(method='ffill')
+df[df.columns.tolist()] = df[df.columns.tolist()].fillna(method='ffill')
     
-# Iterate through all columns and applying cubic interpolation
-for column in df.columns[1:19]:
-    column_series = df[column]
-    column_series = column_series.interpolate(method='spline', order=3, s=0.,limit_direction='both')
-    df[column] = column_series
+# # Iterate through all columns and applying cubic interpolation
+# for column in df.columns[1:19]:
+#     column_series = df[column]
+#     column_series = column_series.interpolate(method='spline', order=3, s=0.,limit_direction='both')
+    # df[column] = column_series
 
 # applying savgol filter to data 
 df_filtered = pd.DataFrame(savgol_filter(df, int(len(df)/100) * 2 + 3, 3, axis=0),
@@ -595,7 +596,7 @@ df_filtered = pd.DataFrame(savgol_filter(df, int(len(df)/100) * 2 + 3, 3, axis=0
 
 df_filtered['epoch_time'] = df['epoch_time'].values
 
-print(df.head())
+print(df.info())
 
 df.to_csv(pth+'\\mpipe.csv',index=False)
 df_filtered.to_csv(pth+"\\mpipe_filtered.csv",index=False)
