@@ -241,9 +241,9 @@ def draw_box(image, point1, point2, color=(0, 255, 0), dis=20):
     angle = math.atan2(y2 - y1, x2 - x1)
 
     # Calculate the new points
-    x1 = x1 - dis * math.cos(angle)
+    x1 = x1 - (dis + 5) * math.cos(angle)
     y1 = y1 - dis * math.sin(angle)
-    x2 = x2 + dis * math.cos(angle)
+    x2 = x2 + (dis + 5) * math.cos(angle)
     y2 = y2 + dis * math.sin(angle)
 
     # Calculate the slope of the line
