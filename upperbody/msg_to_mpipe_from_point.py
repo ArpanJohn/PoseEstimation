@@ -202,7 +202,7 @@ for i,j in zip(cpth,campth):
                                     try:
                                         Smid=midpoint([dic[11]['x']*w,dic[11]['y']*h],[dic[12]['x']*w,dic[12]['y']*h])
                                         perpx=int(Smid[0])
-                                        perpy=(int(Smid[1])+40)
+                                        perpy=(int(Smid[1])+50)
 
                                         cv2.circle(color_image,(perpx,perpy) , 5, (0, 0, 255), 2)
                                         TR.append(pointcloud[perpy][perpx])     #in uv format  
