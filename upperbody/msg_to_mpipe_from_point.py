@@ -121,7 +121,16 @@ xyz=['_x','_y','_z']
 df['epoch_time']=pd.Series(timestamps)
 
 size = (w, h)
-   
+
+try:
+    # Read the JSON file and retrieve the dictionary
+    filename = pth+"\\task_markers.json"
+    with open(filename, 'r') as file:
+        task_markers = json.load(file)
+    task_marker=1
+except:
+    print('no task markers')
+
 # Below VideoWriter object will create
 # a frame of above defined The output 
 # is stored in 'filename.avi' file.
@@ -182,7 +191,13 @@ for i,j in zip(cpth,campth):
             cv2.putText(color_image, str(i.split('\\')[-1]), (10, 460), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
             cv2.putText(color_image_save, str(i.split('\\')[-1]), (10, 460), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
             cv2.putText(color_image_save, str(f"{timestamps[frames]-timestamps[0]:.2f}")+' seconds', (400, 70), cv2.FONT_HERSHEY_COMPLEX, 1, (0,0,255), 2)
-
+            try:
+                cv2.putText(color_image_save, str('task'+str(task_marker)), (400, 460), cv2.FONT_HERSHEY_COMPLEX, 1, (255,0,0), 2)
+            except:
+                pass
+            print(task_markers['task'+str(task_marker)],'\t',timestamps[frames],'\t',task_marker)
+            if timestamps[frames]>task_markers['task'+str(task_marker)]:
+                task_marker+=1
             frames+=1
 
             # Finding and saving the landmark positions        
