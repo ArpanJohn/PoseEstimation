@@ -195,9 +195,9 @@ for i,j in zip(cpth,campth):
                 cv2.putText(color_image_save, str('task'+str(task_marker)), (400, 460), cv2.FONT_HERSHEY_COMPLEX, 1, (255,0,0), 2)
             except:
                 pass
-            print(task_markers['task'+str(task_marker)],'\t',timestamps[frames],'\t',task_marker)
             if timestamps[frames]>task_markers['task'+str(task_marker)]:
                 task_marker+=1
+                print('next task')
             frames+=1
 
             # Finding and saving the landmark positions        
