@@ -106,7 +106,7 @@ y_data2 = []
 mp_holistic = mp.solutions.pose
 holistic_model = mp_holistic.Pose(
     min_detection_confidence=0.5,
-    min_tracking_confidence=0.5
+    min_tracking_confidence=0.9
 )
 
 # Dictionary containing landmark names and corresponding values with mediapipe landmark number
@@ -191,7 +191,8 @@ for i,j in zip(cpth,campth):
                 for mark, data_point in zip(mp_holistic.PoseLandmark, results.pose_landmarks.landmark):
                     dic[mark.value] = dict(landmark = mark.name, 
                         x = data_point.x,
-                        y = data_point.y)  
+                        y = data_point.y,
+                        vis = data_point.visibility)  
                 for key,value in pose_land_marks.items():    
                                 if value[1] !=0:     
                                     try:
@@ -326,6 +327,7 @@ for key,value in pose_land_marks.items():
                 continue
         df[key+xyz[j]]=pd.Series(data)
 
+print(df.info())
 df.to_csv(pth+'\\mpipe_pre.csv',index=False)
 
 try:
