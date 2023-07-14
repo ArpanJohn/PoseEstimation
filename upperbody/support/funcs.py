@@ -461,6 +461,17 @@ def errors(y_true, y_pred):
 
     return rmse, max_error, max_error_index
 
+def split_list_by_indexes(lst, indexes):
+    result = []
+    start = 0
 
+    for index in indexes:
+        result.append(lst[start:index])
+        start = index
+
+    # Add the remaining portion of the list
+    result.append(lst[start:])
+
+    return result
 
 
