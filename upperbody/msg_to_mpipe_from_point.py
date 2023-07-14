@@ -71,6 +71,15 @@ for unpacked in unpacker:
 
 rec_dur=timestamps[-1]-timestamps[0]
 
+try:
+    # Read the JSON file and retrieve the dictionary
+    filename = pth+"\\task_markers.json"
+    with open(filename, 'r') as file:
+        task_markers = json.load(file)
+    task_marker=1
+except:
+    print('no task markers')
+
 # Print the parameters of the recording
 print(('recording duration '+f"{rec_dur:.3}"+' s'+'\nresolution :'+str(w)+'x'+str(h)+ '; fps : '+str(fps)))
 print('number of frames:', len(timestamps))
@@ -121,15 +130,6 @@ xyz=['_x','_y','_z']
 df['epoch_time']=pd.Series(timestamps)
 
 size = (w, h)
-
-try:
-    # Read the JSON file and retrieve the dictionary
-    filename = pth+"\\task_markers.json"
-    with open(filename, 'r') as file:
-        task_markers = json.load(file)
-    task_marker=1
-except:
-    print('no task markers')
 
 # Below VideoWriter object will create
 # a frame of above defined The output 
@@ -187,17 +187,18 @@ for i,j in zip(cpth,campth):
 
             # Displaying FPS on the image
             cv2.putText(color_image, str(int(fps))+" FPS", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
-            cv2.putText(color_image, str(int(frames))+'frames', (500, 70), cv2.FONT_HERSHEY_COMPLEX, 0.75, (0,255,0), 2)
-            cv2.putText(color_image_save, str(f"{timestamps[frames]-timestamps[0]:.2f}")+' sec', (500, 30), cv2.FONT_HERSHEY_COMPLEX, 0.75, (0,0,255), 2)
+            cv2.putText(color_image, str(int(frames))+'frames', (480, 70), cv2.FONT_HERSHEY_COMPLEX, 0.75, (0,0,255), 2)
+            cv2.putText(color_image_save, str(f"{timestamps[frames]-timestamps[0]:.2f}")+' sec', (480, 30), cv2.FONT_HERSHEY_COMPLEX, 0.75, (0,0,255), 2)
             cv2.putText(color_image, str(i.split('\\')[-1]), (10, 460), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
             cv2.putText(color_image_save, str(i.split('\\')[-1]), (10, 460), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
             try:
-                cv2.putText(color_image_save, str('task'+str(task_marker)), (490, 460), cv2.FONT_HERSHEY_COMPLEX, 1, (255,0,0), 2)
+                cv2.putText(color_image_save, str('task'+str(task_marker)), (480, 460), cv2.FONT_HERSHEY_COMPLEX, 0.75, (255,0,0), 2)
+                if timestamps[frames]-timestamps[0]>task_markers['task'+str(task_marker)]:
+                    task_marker+=1
+                    print('next task')
             except:
                 pass
-            if timestamps[frames]>task_markers['task'+str(task_marker)]:
-                task_marker+=1
-                print('next task')
+            
             frames+=1
 
             # Finding and saving the landmark positions        
