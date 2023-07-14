@@ -408,7 +408,7 @@ for column in df.columns[1:]:
 
 # Saving the 3D points of each landmark
 xyz=['x','y','z']
-ls,le,lw,rs,re,rw=[],[],[],[],[],[]
+ls,le,lw,rs,re,rw,tr=[],[],[],[],[],[],[]
 
 c=1
 for i,j in df.iterrows():
@@ -458,6 +458,14 @@ for i,j in df.iterrows():
             point.append(j[p])
         point=np.array(point)        
         rw.append(point)
+c+=3
+for i,j in df.iterrows():
+    for k in range(c,c+3,3):
+        point=[]
+        for p in range(k,k+3):
+            point.append(j[p])
+        point=np.array(point)        
+        tr.append(point)
 
 # Converting to numpy arrays
 ls=np.array(ls)
@@ -468,12 +476,16 @@ rs=np.array(rs)
 re=np.array(re)
 rw=np.array(rw)
 
+tr=np.array(tr)
+
 # Finding the distances between the landmarks
 lu=list(ls-le) # Left upper arm
 ll=list(le-lw) # Left lower arm
 ru=list(rs-re) # Rigth upper arm
 rl=list(re-rw) # Right lower arm
 ss=list(rs-ls) # Biacromial length / distance between shoulder
+rt=list(rs-tr) # Right shoulder to trunk
+lt=list(ls-tr) # Left shoulder to trunk
 
 for i in range(len(lu)):
     lu[i]=np.linalg.norm(lu[i])
@@ -481,19 +493,23 @@ for i in range(len(lu)):
     ru[i]=np.linalg.norm(ru[i])
     rl[i]=np.linalg.norm(rl[i])
     ss[i]=np.linalg.norm(ss[i])
+    rt[i]=np.linalg.norm(rt[i])
+    lt[i]=np.linalg.norm(lt[i])
 
 # Saving the values in a dataframe
-df_ll=pd.DataFrame(columns=['lu','ll','ru','rl','ss'])
+df_ll=pd.DataFrame(columns=['lu','ll','ru','rl','ss','rt','lt'])
 
 df_ll['lu']=pd.Series(lu)
 df_ll['ll']=pd.Series(ll)
 df_ll['ru']=pd.Series(ru)
 df_ll['rl']=pd.Series(rl)
 df_ll['ss']=pd.Series(ss)
+df_ll['rt']=pd.Series(rt)
+df_ll['lt']=pd.Series(lt)
 
 # occlusion based on limb length
-olu,oll,oru,orl,oss=[0],[0],[0],[0],[0]
-th=0.10 # 10cm
+olu,oll,oru,orl,oss,ort,olt=[0],[0],[0],[0],[0],[0],[0]
+th=0.075 # 7.5cm
 for i in range(1,len(df_ll)):
     if abs(df_ll['lu'][i]-df_ll['lu'].mean())>th:
         olu.append(1)
@@ -515,6 +531,14 @@ for i in range(1,len(df_ll)):
         oss.append(1)
     else:
         oss.append(0)
+    if abs(df_ll['rt'][i]-df_ll['rt'].mean())>th:
+        ort.append(1)
+    else:
+        ort.append(0)
+    if abs(df_ll['lt'][i]-df_ll['lt'].mean())>th:
+        olt.append(1)
+    else:
+        olt.append(0)
 
 # filtering occlusion limb length
 for index,j in df.iterrows():
@@ -596,6 +620,19 @@ for index,j in df.iterrows():
         df['RW_x'].iloc[index]=rwx
         df['RW_y'].iloc[index]=rwy
         df['RW_z'].iloc[index]=rwz
+
+    for k in range(3):
+        if ort[index]==0 and olt[index]==0:
+            trrx=df['TR_x'].iloc[index]
+            trry=df['TR_y'].iloc[index]
+            trrz=df['TR_z'].iloc[index]
+        else:
+            trrx=np.nan
+            trry=np.nan
+            trrz=np.nan
+        df['TR_x'].iloc[index]=trrx
+        df['TR_y'].iloc[index]=trry
+        df['TR_z'].iloc[index]=trrz
   
 print(len(df))
 # Perform constant interpolation
