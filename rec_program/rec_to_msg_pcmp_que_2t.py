@@ -328,9 +328,9 @@ class recorder():
 
                 if cv2.waitKey(1) == ord('s'):
                     task_mark=rs.frame.get_frame_metadata(aligned_depth_frame,rs.frame_metadata_value.time_of_arrival)/1000
-                    self.task_markers.append(task_mark)
-                    print(f"task marker {len(self.task_markers)} added at time {task_mark-now.timestamp()}")
-                    cv2.putText(color_image, str(f"task marker {len(self.task_markers)} added at time {task_mark-now.timestamp()}"), (10, 460), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
+                    self.task_markers.append(task_mark-now.timestamp())
+                    print(f"task marker {len(self.task_markers)} added at time {task_mark-now.timestamp():.2f}")
+                    cv2.putText(color_image, str(f"task marker {len(self.task_markers)-2} added at time {task_mark-now.timestamp():.2f}"), (10, 460), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
 
                 # Show images
                 cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
@@ -351,7 +351,7 @@ class recorder():
             cv2.destroyAllWindows()
 
             # Create a dictionary with keys as task1, task2, etc.
-            dictionary = {f"task{i+1}": value for i, value in enumerate(self.task_markers)}
+            dictionary = {f"task{i}": value for i, value in enumerate(self.task_markers)}
 
             # Write the dictionary to a JSON file
             filename = SessDir[0]+"\\task_markers.json"

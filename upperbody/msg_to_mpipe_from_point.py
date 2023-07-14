@@ -186,13 +186,13 @@ for i,j in zip(cpth,campth):
             color_image_save = color_image
 
             # Displaying FPS on the image
-            cv2.putText(color_image, str(int(fps))+" FPS", (10, 70), cv2.FONT_HERSHEY_COMPLEX, 1, (0,255,0), 2)
-            # cv2.putText(color_image, str(int(frames))+' total_frames', (400, 70), cv2.FONT_HERSHEY_COMPLEX, 1, (0,255,0), 2)
+            cv2.putText(color_image, str(int(fps))+" FPS", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
+            cv2.putText(color_image, str(int(frames))+'frames', (500, 70), cv2.FONT_HERSHEY_COMPLEX, 0.75, (0,255,0), 2)
+            cv2.putText(color_image_save, str(f"{timestamps[frames]-timestamps[0]:.2f}")+' sec', (500, 30), cv2.FONT_HERSHEY_COMPLEX, 0.75, (0,0,255), 2)
             cv2.putText(color_image, str(i.split('\\')[-1]), (10, 460), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
             cv2.putText(color_image_save, str(i.split('\\')[-1]), (10, 460), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
-            cv2.putText(color_image_save, str(f"{timestamps[frames]-timestamps[0]:.2f}")+' seconds', (400, 70), cv2.FONT_HERSHEY_COMPLEX, 1, (0,0,255), 2)
             try:
-                cv2.putText(color_image_save, str('task'+str(task_marker)), (400, 460), cv2.FONT_HERSHEY_COMPLEX, 1, (255,0,0), 2)
+                cv2.putText(color_image_save, str('task'+str(task_marker)), (490, 460), cv2.FONT_HERSHEY_COMPLEX, 1, (255,0,0), 2)
             except:
                 pass
             if timestamps[frames]>task_markers['task'+str(task_marker)]:
