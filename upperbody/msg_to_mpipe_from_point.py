@@ -114,7 +114,7 @@ y_data2 = []
 # Initializing the model to locate the landmarks
 mp_holistic = mp.solutions.pose
 holistic_model = mp_holistic.Pose(
-    min_detection_confidence=0.5,
+    min_detection_confidence=0.4,
     min_tracking_confidence=0.9
 )
 
