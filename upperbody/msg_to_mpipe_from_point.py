@@ -15,8 +15,6 @@ import json
 import time
 import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
-from scipy.interpolate import CubicSpline, interp1d
-
 
 # Measure the execution time
 start_time = time.time()
@@ -30,6 +28,7 @@ pth = session_data["directory"]
 
 lst = os.listdir(pth)
 
+# Finding the raw .msgpack files
 targetPattern = f"{pth}\\POINT*"
 campth = glob.glob(targetPattern)
 
@@ -66,11 +65,14 @@ w = int(params[0])
 h = int(params[1])
 fps = int(params[-1])
 
+# saving the time stamps to a list
 for unpacked in unpacker:
     timestamps.append(unpacked)
 
+# finding the recording duration
 rec_dur=timestamps[-1]-timestamps[0]
 
+# Looking for task markers
 try:
     # Read the JSON file and retrieve the dictionary
     filename = pth+"\\task_markers.json"
@@ -99,17 +101,8 @@ mp_drawing = mp.solutions.drawing_utils
 previousTime = 0
 currentTime = 0
 
+# Initializing frame coutner
 frames=0
-
-c=0
-
-fig, ax = plt.subplots()
-ax.set_ylim(-480,0)
-ax.set_xlim(0,640)
-x_data1 = []
-y_data1 = []
-x_data2 = []
-y_data2 = []
 
 # Initializing the model to locate the landmarks
 mp_holistic = mp.solutions.pose
@@ -127,8 +120,10 @@ r_hand_land_marks={'RI':[RI,5],'RT':[RT,2],'RP':[RP,17]}
 df=pd.DataFrame()
 xyz=['_x','_y','_z']
 
+# the 1st column has the timestamps in epoch time format
 df['epoch_time']=pd.Series(timestamps)
 
+# Getting size tuple to save in video format
 size = (w, h)
 
 # Below VideoWriter object will create
@@ -141,6 +136,7 @@ result = cv2.VideoWriter(pth+'\\video.avi',
 for i,j in zip(cpth,campth):
 
     try:
+        # unpacking RGB and pointcloud files for .msgpack
         col_file = open(i, "rb")
         unpacker = None
         unpacker = msgp.Unpacker(col_file, object_hook=mpn.decode)
@@ -148,11 +144,11 @@ for i,j in zip(cpth,campth):
         d_unpacker = None
         d_unpacker = msgp.Unpacker(depth_file, object_hook=mpn.decode)
         for unpacked,d_unpacked in zip(unpacker,d_unpacker):
-            c+=1
             # define the contrast and brightness value
-            contrast = 1.5 # Contrast control ( 0 to 127)
-            brightness =20  # Brightness control (0-100)
+            contrast = 1.5 
+            brightness =20  
 
+            # Converting the RGB image to BGR for mediapipe pose
             img = cv2.cvtColor(unpacked, cv2.COLOR_RGB2BGR)
             imagep=cv2.addWeighted( img, contrast, img, 0, brightness)
             imagep = cv2.cvtColor(imagep, cv2.COLOR_BGR2RGB)
@@ -183,16 +179,14 @@ for i,j in zip(cpth,campth):
             fps = 1 / (currentTime-previousTime)
             previousTime = currentTime
 
-            color_image_save = color_image
-
-            # Displaying FPS on the image
+            # Displaying information on the image
             cv2.putText(color_image, str(int(fps))+" FPS", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
             cv2.putText(color_image, str(int(frames))+'frames', (480, 70), cv2.FONT_HERSHEY_COMPLEX, 0.75, (0,0,255), 2)
-            cv2.putText(color_image_save, str(f"{timestamps[frames]-timestamps[0]:.2f}")+' sec', (480, 30), cv2.FONT_HERSHEY_COMPLEX, 0.75, (0,0,255), 2)
+            cv2.putText(color_image, str(f"{timestamps[frames]-timestamps[0]:.2f}")+' sec', (480, 30), cv2.FONT_HERSHEY_COMPLEX, 0.75, (0,0,255), 2)
             cv2.putText(color_image, str(i.split('\\')[-1]), (10, 460), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
-            cv2.putText(color_image_save, str(i.split('\\')[-1]), (10, 460), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
+            cv2.putText(color_image, str(i.split('\\')[-1]), (10, 460), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
             try:
-                cv2.putText(color_image_save, str('task'+str(task_marker)), (480, 460), cv2.FONT_HERSHEY_COMPLEX, 0.75, (255,0,0), 2)
+                cv2.putText(color_image, str('task'+str(task_marker)), (480, 460), cv2.FONT_HERSHEY_COMPLEX, 0.75, (255,0,0), 2)
                 if timestamps[frames]-timestamps[0]>task_markers['task'+str(task_marker)]:
                     task_marker+=1
                     print('next task')
@@ -264,35 +258,7 @@ for i,j in zip(cpth,campth):
                                 pass
                 except:
                     pass
-
-                # Clear the graph
-                # ax.cla()
-
-                # ax.set_ylim(-h,0)
-                # ax.set_xlim(0,w)
-
-                # Append the data to the lists
-                # x_data1.append(dic[16]['x']*w)
-                # y_data1.append(-dic[16]['y']*h)
-
-                # x_data2.append(dic[12]['x']*w)
-                # y_data2.append(-dic[12]['y']*h)
-
-                # Plot the data
-                # ax.plot(x_data1[-20:],y_data1[-20:],color='red')
-                # ax.plot(x_data2[-20:],y_data2[-20:],color='blue')
-
-                # plt.legend(['Right Wrist','Right Shoulder'])
-
-                # Adjust the plot limits if necessary
-                # ax.set_xlim(y_data1[-20],y_data1[-1])
-                # ax.relim()
-                # ax.autoscale_view()
-
-                # Update the plot
-                # plt.draw()
-                # plt.pause(0.001)
-            except:
+            except: # append np.nan if pose not found
                 LS.append([np.nan,np.nan,np.nan])
                 LE.append([np.nan,np.nan,np.nan])
                 LW.append([np.nan,np.nan,np.nan])
@@ -308,14 +274,16 @@ for i,j in zip(cpth,campth):
             if cv2.waitKey(5) & 0xFF == ord('q'):
                 break
             
+            # Showing the video
             cv2.imshow("pose landmarks", color_image)
+
             # Write the frame into the
             # file 'filename.avi'
-            result.write(color_image_save)
+            result.write(color_image)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
-            try:
+            try: # checks for corrupted files
                 if (unpacked)==-1:
                     cv2.destroyAllWindows()
                     break
@@ -324,14 +292,17 @@ for i,j in zip(cpth,campth):
     except:
         continue
 
+    # closes the .msgpack files
     depth_file.close()
     col_file.close()
 
 result.release()
 cv2.destroyAllWindows()
 
-print(frames)
-# quit()
+# Verify number of frames processed
+print('number of frames processed: ',frames)
+
+# Adding landmarks positions to a the dataframe
 for key,value in pose_land_marks.items():    
     for j in range(3):
         data=[]
@@ -344,6 +315,7 @@ for key,value in pose_land_marks.items():
         df[key+xyz[j]]=pd.Series(data)
 
 print(df.info())
+# dataframe before the interpolation and limblength occlusion
 df.to_csv(pth+'\\mpipe_pre.csv',index=False)
 
 try:
@@ -634,21 +606,16 @@ for index,j in df.iterrows():
         df['TR_y'].iloc[index]=trry
         df['TR_z'].iloc[index]=trrz
   
-print(len(df))
 # Perform constant interpolation
 df[df.columns.tolist()] = df[df.columns.tolist()].fillna(method='ffill')
     
-# # Iterate through all columns and applying cubic interpolation
-# for column in df.columns[1:19]:
-#     column_series = df[column]
-#     column_series = column_series.interpolate(method='spline', order=3, s=0.,limit_direction='both')
-    # df[column] = column_series
 
 # applying savgol filter to data 
 df_filtered = pd.DataFrame(savgol_filter(df, int(len(df)/100) * 2 + 3, 3, axis=0),
                                 columns=df.columns,
                                 index=df.index)
 
+# adding the epoch_time column back in to the filtered dataframe
 df_filtered['epoch_time'] = df['epoch_time'].values
 
 print(df.info())

@@ -14,8 +14,6 @@ import re as re_str
 import json
 import time
 import matplotlib.pyplot as plt
-from scipy.signal import savgol_filter
-from scipy.interpolate import CubicSpline, interp1d
 import math
 
 # Measure the execution time
@@ -159,13 +157,13 @@ size = (w, h)
 # Below VideoWriter object will create
 # a frame of above defined The output 
 # is stored in 'filename.avi' file.
-result = cv2.VideoWriter(pth+'\\video.avi', 
+result = cv2.VideoWriter(pth+'\\video_graph.avi', 
                          cv2.VideoWriter_fourcc(*'MJPG'),
                          10, size)
 
 for i,j in zip(cpth,campth):
-
     try:
+        # opening the RGB and pointcloud .msgpack files
         col_file = open(i, "rb")
         unpacker = None
         unpacker = msgp.Unpacker(col_file, object_hook=mpn.decode)
@@ -210,7 +208,7 @@ for i,j in zip(cpth,campth):
 
             color_image_save = color_image
 
-            # Displaying FPS on the image
+            # Displaying information on the image
             cv2.putText(color_image, str(int(fps))+" FPS", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,255,0), 2)
             cv2.putText(color_image, str(int(frames))+'frames', (480, 70), cv2.FONT_HERSHEY_COMPLEX, 0.75, (0,0,255), 2)
             cv2.putText(color_image_save, str(f"{timestamps[frames]-timestamps[0]:.2f}")+' sec', (480, 30), cv2.FONT_HERSHEY_COMPLEX, 0.75, (0,0,255), 2)
@@ -226,13 +224,15 @@ for i,j in zip(cpth,campth):
 
             # Clear the graph
             ax.cla()
+
+            # show the last 50 values
             st=0
             if frames > 50:
                 st=frames-50
+
             # Plot the data
             ax.plot(x_data1[st:frames],y_data1[st:frames],color='red')
             ax.plot(x_data2[st:frames],y_data2[st:frames],color='blue')
-
             plt.legend(['mocap Right Elbow angle','mpipe Right elbow angle'])
 
             # Adjust the plot limits if necessary
