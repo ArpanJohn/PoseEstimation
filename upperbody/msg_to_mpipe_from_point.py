@@ -315,8 +315,6 @@ for key,value in pose_land_marks.items():
         df[key+xyz[j]]=pd.Series(data)
 
 print(df.info())
-# dataframe before the interpolation and limblength occlusion
-df.to_csv(pth+'\\mpipe_pre.csv',index=False)
 
 try:
     # Read the JSON file containing the Session Directory
@@ -620,7 +618,6 @@ df_filtered['epoch_time'] = df['epoch_time'].values
 
 print(df.info())
 
-df.to_csv(pth+'\\mpipe.csv',index=False)
 df_filtered.to_csv(pth+"\\mpipe_filtered.csv",index=False)
 
 # Calculate the elapsed time
