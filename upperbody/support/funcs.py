@@ -442,7 +442,12 @@ def errors(y_true, y_pred):
     mask = ~np.isnan(array1) & ~np.isnan(array2)
     new_array1 = array1[mask]
     new_array2 = array2[mask]
-    
+
+    # slope_mask1 = np.array(high_slope_index(new_array1,window_length=50,slope_threshold=1.5))
+    # slope_mask2 = np.array(high_slope_index(new_array2,window_length=50,slope_threshold=1.5))
+    # new_array1[slope_mask1] = np.mean(new_array1)
+    # new_array2[slope_mask2] = np.mean(new_array2)
+
     # Calculate the squared difference between the two arrays
     squared_diff = (new_array1 - new_array2) ** 2
 
@@ -474,4 +479,16 @@ def split_list_by_indexes(lst, indexes):
 
     return result
 
-
+def high_slope_index(input_list, window_length=200, slope_threshold=0.005):
+    output_list = []
+    n=window_length
+    for i in range(len(input_list)):
+        start_idx = max(i - n, 0)
+        end_idx = min(i + n + 1, len(input_list))
+        surrounding = input_list[start_idx:end_idx]
+        slope=np.polyfit(range(len(surrounding)),surrounding,1)[0]
+        if abs(slope)>slope_threshold:
+            output_list.append(True)
+        else:
+            output_list.append(False) 
+    return output_list
