@@ -368,12 +368,12 @@ except:
 interpolate_columns = ['LS_x','LS_y','LS_z','RS_x','RS_y','RS_z','TR_x','TR_y','TR_z'] # df.columns.tolist() 
 
 # Perform constant interpolation
-df[interpolate_columns] = df[interpolate_columns].fillna(method='ffill')
+# df[interpolate_columns] = df[interpolate_columns].fillna(method='ffill')
 
 # Iterate through all columns and applying cubic interpolation
 for column in df.columns[1:]:
     column_series = df[column]
-    column_series = column_series.interpolate(method='spline', order=3, s=0.,limit_direction='both')
+    column_series = column_series.interpolate(method='spline', order=1, s=0.,limit_direction='both')
     df[column] = column_series
 
 # Saving the 3D points of each landmark
@@ -605,7 +605,12 @@ for index,j in df.iterrows():
         df['TR_z'].iloc[index]=trrz
   
 # Perform constant interpolation
-df[df.columns.tolist()] = df[df.columns.tolist()].fillna(method='ffill')
+# df[df.columns.tolist()] = df[df.columns.tolist()].fillna(method='ffill')
+# Iterate through all columns and applying cubic interpolation
+for column in df.columns[1:]:
+    column_series = df[column]
+    column_series = column_series.interpolate(method='spline', order=1, s=0.,limit_direction='both')
+    df[column] = column_series
     
 
 # applying savgol filter to data 

@@ -23,7 +23,7 @@ def get_folders_in_directory(directory_path):
 directory_path = pth
 
 folders_list = get_folders_in_directory(directory_path)
-folders_list = [pth+"\\"+string for string in folders_list if string.startswith('21-07')]
+folders_list = [pth+"\\"+string for string in folders_list if string.startswith('22-07')]
 print(folders_list)
 
 
