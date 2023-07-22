@@ -116,7 +116,7 @@ centx=pos[aurco_flag][centers[1][1],centers[1][0]]
 for i in range(3):
     for j in range(3):
         if i!=j:
-            if 18.5<np.linalg.norm(pos[aurco_flag][centers[i][1],centers[i][0]]-pos[aurco_flag][centers[j][1],centers[j][0]])*100<21.5 and 13.5<np.linalg.norm(pos[aurco_flag][centers[3-i-j][1],centers[3-j-i][0]]-pos[aurco_flag][centers[j][1],centers[j][0]])*100<16.5:
+            if 18.5<np.linalg.norm(pos[aurco_flag][centers[i][1],centers[i][0]]-pos[aurco_flag][centers[j][1],centers[j][0]])*100<21.55 and 13.5<np.linalg.norm(pos[aurco_flag][centers[3-i-j][1],centers[3-j-i][0]]-pos[aurco_flag][centers[j][1],centers[j][0]])*100<16.5:
                 cento=pos[aurco_flag][centers[j][1],centers[j][0]]
                 centz=pos[aurco_flag][centers[i][1],centers[i][0]]
                 centx=pos[aurco_flag][centers[3-j-i][1],centers[3-j-i][0]]

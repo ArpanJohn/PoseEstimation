@@ -145,8 +145,8 @@ for i,j in zip(cpth,campth):
         d_unpacker = msgp.Unpacker(depth_file, object_hook=mpn.decode)
         for unpacked,d_unpacked in zip(unpacker,d_unpacker):
             # define the contrast and brightness value
-            contrast = 1.5 
-            brightness =20  
+            contrast = 2 
+            brightness =40  
 
             # Converting the RGB image to BGR for mediapipe pose
             img = cv2.cvtColor(unpacked, cv2.COLOR_RGB2BGR)
@@ -244,7 +244,7 @@ for i,j in zip(cpth,campth):
                             # Check if the landmark is inside the box
                             try:
                                 if j[-1]!=0:
-                                    if point_in_quad([dic[j[-1]]['x']*w,dic[j[-1]]['y']*h], values[0]) and k not in values[-1]:
+                                    if point_in_quad([dic[j[-1]]['x']*w,dic[j[-1]]['y']*h], values[0]) and k not in values[-1] and frames > 50:
                                         for p in values[-1]:
                                             if j[0][pd.Series(j[0][-1]).last_valid_index()][-1]+0.2 > pose_land_marks[p][0][pd.Series(pose_land_marks[p][0][-1]).last_valid_index()][-1] or np.isnan(j[0][-1]).any():
                                                 # print(k, 'is occluded by', key, p, 'at frame', frames,str(f" \t{timestamps[frames]-timestamps[0]:.2f}")+' seconds')
